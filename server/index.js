@@ -493,6 +493,23 @@ function isTypingAnswerCorrect(typed, correctTitle, correctArtist) {
   const combo2 = cleanFuzzyString(`${correctArtist}${correctTitle}`);
 
   if (!t) return false;
+
+  // If user selected/typed "SongTitle - ArtistName", strictly require the song title portion to match!
+  if (typed.includes(' - ') || typed.includes('-')) {
+    const parts = typed.split(/\s*-\s*/);
+    if (parts.length >= 2) {
+      const typedTitle = cleanFuzzyString(parts[0]);
+      const typedArtist = cleanFuzzyString(parts.slice(1).join('-'));
+      if (typedTitle && typedArtist) {
+        const titleMatches = (typedTitle === title) ||
+                             (title.length >= 3 && (title.includes(typedTitle) || typedTitle.includes(title)));
+        const artistMatches = (typedArtist === artist) ||
+                              (artist.length >= 3 && (artist.includes(typedArtist) || typedArtist.includes(artist)));
+        return titleMatches && artistMatches;
+      }
+    }
+  }
+
   if (t === title || t === artist || t === combo1 || t === combo2) return true;
   // If typed answer matches the beginning or is a strong substring of title
   if (title.length >= 3 && (title.includes(t) || t.includes(title))) return true;
@@ -882,7 +899,7 @@ io.on('connection', (socket) => {
   }
 
   // Submit answer (Choice button OR Typed string)
-  socket.on('submit_answer', ({ optionIndex, typedAnswer }) => {
+  socket.on('submit_answer', ({ optionIndex, typedAnswer, answerText }) => {
     const room = rooms.get(socket.roomCode);
     if (!room || room.state !== 'quiz') return;
 
@@ -898,9 +915,11 @@ io.on('connection', (socket) => {
 
     if (q.mode === 'typing') {
       player.typedAnswer = (typedAnswer || '').trim();
+      player.answerText = player.typedAnswer;
       isCorrect = isTypingAnswerCorrect(typedAnswer, q.correctTitle, q.correctArtist);
     } else {
       player.answerIndex = optionIndex;
+      player.answerText = answerText || (q.options && q.options[optionIndex]) || '';
       isCorrect = optionIndex === q.correctIndex;
     }
 
@@ -1755,7 +1774,8 @@ io.on('connection', (socket) => {
         avatar: p.avatar,
         answered: p.answered || isCorrect,
         answerIndex: p.answerIndex,
-        typedAnswer: displayAnswer || p.typedAnswer,
+        answerText: p.answerText || (q.options && p.answerIndex !== null && p.answerIndex !== undefined && q.options[p.answerIndex]) || displayAnswer || p.typedAnswer || '',
+        typedAnswer: p.answerText || displayAnswer || p.typedAnswer || '',
         hasSkipped: p.hasSkipped,
         isCorrect,
         pointsEarned: p.pointsEarned,

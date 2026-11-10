@@ -1242,7 +1242,8 @@
       const isSurvival = currentRoom.settings && currentRoom.settings.gameMode === 'survival';
       const myResult = revealData.playerResults.find(p => p.id === socket.id);
       if (myResult) {
-        const userAns = myResult.typedAnswer || (revealData.options && myResult.answerIndex !== null && revealData.options[myResult.answerIndex] ? `"${revealData.options[myResult.answerIndex]}"` : 'คำตอบที่คุณเลือก');
+        const rawAns = myResult.answerText || myResult.typedAnswer || (revealData.options && myResult.answerIndex !== null && myResult.answerIndex !== undefined && revealData.options[myResult.answerIndex] ? revealData.options[myResult.answerIndex] : '');
+        const userAns = rawAns ? `"${rawAns}"` : '(ไม่ได้ระบุคำตอบ)';
         if (myResult.isCorrect) {
           revealUserBanner.className = 'user-result-banner correct';
           const survivalText = isSurvival ? ` (❤️ เหลือ ${myResult.lives}/3 ชีวิต)` : '';
@@ -1517,15 +1518,17 @@
 
     window.soundFX?.playLock();
 
+    let chosenText = '';
     choicesGrid.querySelectorAll('.choice-btn').forEach((btn, idx) => {
       if (idx === index) {
         btn.classList.add('selected');
+        chosenText = btn.textContent.replace(/^[A-D]\s*[:.]\s*/i, '').trim();
       } else {
         btn.disabled = true;
       }
     });
 
-    socket.emit('submit_answer', { optionIndex: index });
+    socket.emit('submit_answer', { optionIndex: index, answerText: chosenText });
   }
 
   function handleSubmitTypingAnswer() {

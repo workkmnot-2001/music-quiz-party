@@ -509,6 +509,33 @@ function checkMusicVideoGuess(mvId, typed) {
   const combo1 = clean(`${mv.title}${mv.artist}`);
   const combo2 = clean(`${mv.artist}${mv.title}`);
 
+  // If user guessed "Song - Artist", strictly require the song title portion to match!
+  if (typed && (typed.includes(' - ') || typed.includes('-'))) {
+    const parts = typed.split(/\s*-\s*/);
+    if (parts.length >= 2) {
+      const typedTitle = clean(parts[0]);
+      const typedArtist = clean(parts.slice(1).join('-'));
+      if (typedTitle && typedArtist) {
+        const titleMatches = (typedTitle === title) ||
+                             (title.length >= 3 && (title.includes(typedTitle) || typedTitle.includes(title)));
+        const artistMatches = (typedArtist === artist) ||
+                              (artist.length >= 3 && (artist.includes(typedArtist) || typedArtist.includes(artist)));
+        const isMatch = titleMatches && artistMatches;
+        return {
+          isCorrect: isMatch,
+          trackInfo: {
+            title: mv.title,
+            artist: mv.artist,
+            album: mv.album,
+            year: mv.year,
+            artwork: mv.artwork,
+            previewUrl: mv.previewUrl
+          }
+        };
+      }
+    }
+  }
+
   const isCorrect = (
     t === title ||
     t === artist ||

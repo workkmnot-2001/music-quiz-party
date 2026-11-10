@@ -1042,7 +1042,10 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
 
   for (let i = 0; i < selectedTracks.length; i++) {
     const track = selectedTracks[i];
-    const catPool = poolByMain[track.mainId] || pool;
+    const effectiveSubId = track.subId || firstCat;
+    const sameSubPool = pool.filter(t => t.subId === effectiveSubId);
+    const subSeeds = seedData[effectiveSubId] || (specificSeeds && specificSeeds.length > 0 ? specificSeeds : []);
+    const strictCategoryPool = sameSubPool.length >= 4 ? sameSubPool : (subSeeds.length >= 4 ? subSeeds : (poolByMain[track.mainId] || pool));
 
     // Determine question mode: choices, typing, year, heardle, songdle, or mv
     let questionType = 'choices';
@@ -1221,9 +1224,9 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
       const wrongOptions = [];
       const seenOptionKeys = new Set([correctNormKey]);
 
-      // 1. First priority: other tracks from the same category
-      const shuffledCatPool = [...catPool].sort(() => Math.random() - 0.5);
-      for (const t of shuffledCatPool) {
+      // 1. First priority: other tracks from the exact same subcategory/genre pool
+      const shuffledSubPool = [...strictCategoryPool].sort(() => Math.random() - 0.5);
+      for (const t of shuffledSubPool) {
         const tTitle = convertToEnglishIfNeeded(t.title);
         const tArtist = convertToEnglishIfNeeded(t.artist);
         const optStr = `${tTitle} - ${tArtist}`;
@@ -1236,10 +1239,10 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
         }
       }
 
-      // 2. Second priority: other tracks from the quiz pool
-      if (wrongOptions.length < 3) {
-        const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
-        for (const t of shuffledPool) {
+      // 2. Second priority: category-specific seed data if still needed
+      if (wrongOptions.length < 3 && subSeeds.length > 0) {
+        const shuffledSeeds = [...subSeeds].sort(() => Math.random() - 0.5);
+        for (const t of shuffledSeeds) {
           const tTitle = convertToEnglishIfNeeded(t.title);
           const tArtist = convertToEnglishIfNeeded(t.artist);
           const optStr = `${tTitle} - ${tArtist}`;
@@ -1253,11 +1256,11 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
         }
       }
 
-      // 3. Fallback from category-specific seed data if pool is small
-      if (wrongOptions.length < 3) {
-        const seeds = specificSeeds || (targetMainId === 'mix' ? Object.values(seedData).flat() : (seedData[targetMainId] || []));
-        const shuffledSeeds = seeds.sort(() => Math.random() - 0.5);
-        for (const t of shuffledSeeds) {
+      // 3. Third priority: pool by main category ONLY if subcategory is not strictly isolated
+      const isStrictlyIsolated = ['lukthung', 'thai_rap', 'tpop', 'anime'].includes(effectiveSubId);
+      if (wrongOptions.length < 3 && !isStrictlyIsolated) {
+        const shuffledCatPool = [...(poolByMain[track.mainId] || pool)].sort(() => Math.random() - 0.5);
+        for (const t of shuffledCatPool) {
           const tTitle = convertToEnglishIfNeeded(t.title);
           const tArtist = convertToEnglishIfNeeded(t.artist);
           const optStr = `${tTitle} - ${tArtist}`;

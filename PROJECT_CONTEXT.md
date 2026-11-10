@@ -38,6 +38,20 @@
 - **ไฟล์ที่เกี่ยวข้อง**: [server/musicService.js](file:///c:/Users/notz/Desktop/new-my-game/server/musicService.js), [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js)
 - **ค่าและพฤติกรรมล่าสุด**: แยก Seed ลูกทุ่ง & เพื่อชีวิต 100% และซิงค์เป้าหมายเพลงให้ตรงกับหน้าเฉลย
 
+### 6. ปรับข้อความหัวเรื่อง & แก้ไขบัคทายเพลงไม่ตรงเฉลย & แยกหมวดหมู่ช้อยส์ 100%
+- **ไฟล์ที่เกี่ยวข้อง**:
+  - [public/index.html](file:///c:/Users/notz/Desktop/new-my-game/public/index.html)
+  - [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js)
+  - [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js)
+  - [server/musicService.js](file:///c:/Users/notz/Desktop/new-my-game/server/musicService.js)
+  - [server/gameModesService.js](file:///c:/Users/notz/Desktop/new-my-game/server/gameModesService.js)
+- **ค่าและพฤติกรรมล่าสุด**:
+  - เปลี่ยน Subtitle ในหน้าหลักเป็น: `"ปาร์ตี้เกมทายเพลงสด เล่นเพลงพร้อมกันกับเพื่อนได้เลย!"`
+  - แก้ไขระบบตรวจคำตอบในโหมด MV และ Typing: หากผู้เล่นเลือกคำตอบรูปแบบ `"ชื่อเพลง - ศิลปิน"` ตัวชื่อเพลงต้องตรงกับเพลงเฉลยจริงเท่านั้น (ป้องกันเคสทาย `"Ditto - NewJeans"` แล้วระบบให้คะแนนถูกในคลิปเพลง `"Bubble Gum"`)
+  - แก้ไขหน้าเฉลยที่ขึ้นข้อความ `"คำตอบที่คุณเลือก"`: ส่งและเก็บ `answerText` ของช้อยส์หรือข้อความที่ผู้เล่นเลือกจริงไปแสดงผลในหน้าเฉลยเสมอ
+  - ล็อกช้อยส์หลอก (Distractors) ในหมวดหมู่ `"ลูกทุ่ง & เพื่อชีวิต"` ให้ดึงเฉพาะเพลงลูกทุ่ง/เพื่อชีวิต 100% ไม่มีเพลงร็อก/ป๊อป (เช่น Cocktail หรือ KLEAR) หลุดเข้ามาปะปนอีกต่อไป
+- **เหตุผลที่แก้**: ตามที่ผู้ใช้แจ้งปัญหาจากภาพหน้าจอผลการเล่นจริงในเกม
+
 ---
 
 ## ⏳ งานที่ยังค้าง / ขั้นตอนถัดไป (Pending & Next Tasks)
