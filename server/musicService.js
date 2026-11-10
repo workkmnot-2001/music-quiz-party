@@ -47,6 +47,17 @@ const MAIN_CATEGORIES = {
         country: 'th'
       },
       {
+        id: 'thai_rap',
+        name: '🎤 แร็ป & ฮิปฮอปไทย (Thai Rap & Hip-Hop)',
+        queries: [
+          'YOUNGOHM', 'F.HERO', 'SARAN', 'SPRITE', '1MILL',
+          'OG-ANIC', 'URBOYTJ', 'TWOPEE', 'ILLSLICK', 'DIAMOND MQT',
+          'D GERRARD', 'MAIYARAP', 'MILLI', 'RachYO', 'Lazyloxy',
+          'P-HOT', 'DABOYWAY', 'TIMETHAI', 'Guygeegee', 'FIIXD', '19HUNNID'
+        ],
+        country: 'th'
+      },
+      {
         id: 'lukthung',
         name: '🌾 ลูกทุ่ง & เพื่อชีวิต (Thai Country & Luk Thung)',
         queries: [
@@ -885,6 +896,10 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
     targetMainId = 'tpop';
     defaultCategoryName = '💫 T-Pop ไอดอล';
     specificSeeds = seedData['tpop'];
+  } else if (firstCat === 'thai_rap') {
+    targetMainId = 'thai_rap';
+    defaultCategoryName = '🎤 แร็ป & ฮิปฮอปไทย';
+    specificSeeds = seedData['thai_rap'];
   } else if (firstCat === 'thai_poprock') {
     targetMainId = 'thai_poprock';
     defaultCategoryName = '🎸 ป๊อป & ร็อกคลาสสิก';
@@ -1261,6 +1276,7 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
       while (wrongOptions.length < 3) {
         let dummy = `เพลงตัวอย่าง ${fallbackIdx} - ศิลปินตัวอย่าง`;
         if (firstCat === 'lukthung') dummy = `เพลงลูกทุ่งยอดฮิต ${fallbackIdx} - รวมศิลปินลูกทุ่ง`;
+        else if (firstCat === 'thai_rap') dummy = `เพลงแร็ปฮิต ${fallbackIdx} - รวมแร็ปเปอร์ไทย`;
         else if (firstCat === 'tpop') dummy = `T-Pop Song ${fallbackIdx} - T-Pop Idol`;
         else if (track.mainId === 'inter') dummy = `Sample Song ${fallbackIdx} - Sample Artist`;
         wrongOptions.push(dummy);
