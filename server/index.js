@@ -494,11 +494,13 @@ function isTypingAnswerCorrect(typed, correctTitle, correctArtist) {
 
   if (!t) return false;
   if (t === title || t === artist || t === combo1 || t === combo2) return true;
-  // If typed answer matches the beginning or is a strong substring
+  // If typed answer matches the beginning or is a strong substring of title
   if (title.length >= 3 && (title.includes(t) || t.includes(title))) return true;
-  if (artist.length >= 3 && (artist.includes(t) || t.includes(artist))) return true;
+  // If typed answer matches combos
   if (combo1.length >= 4 && (combo1.includes(t) || t.includes(combo1))) return true;
   if (combo2.length >= 4 && (combo2.includes(t) || t.includes(combo2))) return true;
+  // If typed answer matches the artist alone (do not match if t contains an unrelated song title)
+  if (artist.length >= 3 && artist.includes(t)) return true;
   return false;
 }
 
@@ -1042,6 +1044,7 @@ io.on('connection', (socket) => {
       player.pointsEarned = pts;
       player.answered = true;
       player.streak = (player.streak || 0) + 1;
+      player.typedAnswer = `${cleanGuess.title} - ${cleanGuess.artist}`;
 
       io.to(room.code).emit('songdle_update', sanitizeSongdleState(room.songdleState, room, true));
       io.to(room.code).emit('songdle_toast', {
@@ -1162,6 +1165,26 @@ io.on('connection', (socket) => {
       status: 'playing',
       winner: null
     };
+
+    // Synchronize current question object with newly randomized song
+    const currentQ = room.questions[room.currentQuestionIndex];
+    if (currentQ) {
+      currentQ.correctTitle = newTarget.title;
+      currentQ.correctArtist = newTarget.artist;
+      currentQ.album = newTarget.album || '';
+      currentQ.artwork = newTarget.artwork;
+      currentQ.previewUrl = newTarget.previewUrl;
+      currentQ.releaseYear = newTarget.year;
+      currentQ.targetMetadata = newTarget;
+    }
+
+    // Reset player round answers for the newly randomized song
+    for (const p of room.players.values()) {
+      p.answered = false;
+      p.typedAnswer = '';
+      p.pointsEarned = 0;
+      p.songdleGuesses = [];
+    }
 
     const requestingPlayer = room.players.get(socket.id);
     io.to(room.code).emit('songdle_round_started', {
@@ -1341,6 +1364,7 @@ io.on('connection', (socket) => {
       player.pointsEarned = pts;
       player.answered = true;
       player.streak = (player.streak || 0) + 1;
+      player.typedAnswer = text;
 
       io.to(room.code).emit('mv_update', sanitizeMvState(room.mvState, room, true));
       io.to(room.code).emit('mv_toast', {
@@ -1478,6 +1502,32 @@ io.on('connection', (socket) => {
       winner: null
     };
 
+    // Synchronize current question object with newly randomized MV
+    const currentQ = room.questions[room.currentQuestionIndex];
+    if (currentQ) {
+      currentQ.correctTitle = newTarget.title;
+      currentQ.correctArtist = newTarget.artist;
+      currentQ.album = newTarget.album || '';
+      currentQ.artwork = newTarget.artwork;
+      currentQ.previewUrl = newTarget.previewUrl;
+      currentQ.videoUrl = newTarget.previewUrl;
+      currentQ.releaseYear = newTarget.year;
+      currentQ.category = `🎬 Music Video (${newTarget.country})`;
+      currentQ.hints = [
+        `แนวเพลง: ${newTarget.genre}`,
+        `สัญชาติ: ${newTarget.country}`,
+        `ปีที่ปล่อย: ${newTarget.year}`
+      ];
+    }
+
+    // Reset player round answers for the newly randomized song
+    for (const p of room.players.values()) {
+      p.answered = false;
+      p.typedAnswer = '';
+      p.pointsEarned = 0;
+      p.mvAttempts = [];
+    }
+
     const requestingPlayer = room.players.get(socket.id);
     io.to(room.code).emit('mv_round_started', {
       mvState: sanitizeMvState(room.mvState, room, false),
@@ -1559,46 +1609,118 @@ io.on('connection', (socket) => {
     if (!rooms.has(room.code) || room.state !== 'quiz') return;
     room.state = 'reveal';
     if (room.roundTimeout) clearTimeout(room.roundTimeout);
+    if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
 
     const q = room.questions[room.currentQuestionIndex];
+    if (!q) return;
+
+    // Synchronize correct track info from active mode state (MV or Songdle or standard)
+    let correctTitle = q.correctTitle;
+    let correctArtist = q.correctArtist;
+    let album = q.album || '';
+    let artwork = q.artwork;
+    let previewUrl = q.videoUrl || q.previewUrl;
+    let releaseYear = q.releaseYear;
+
+    if (q.mode === 'mv' && room.mvState && room.mvState.target) {
+      correctTitle = room.mvState.target.title || correctTitle;
+      correctArtist = room.mvState.target.artist || correctArtist;
+      album = room.mvState.target.album || album;
+      artwork = room.mvState.target.artwork || artwork;
+      previewUrl = room.mvState.target.videoUrl || room.mvState.target.previewUrl || previewUrl;
+      releaseYear = room.mvState.target.year || releaseYear;
+    } else if (q.mode === 'songdle' && room.songdleState && room.songdleState.target) {
+      correctTitle = room.songdleState.target.title || correctTitle;
+      correctArtist = room.songdleState.target.artist || correctArtist;
+      album = room.songdleState.target.album || album;
+      artwork = room.songdleState.target.artwork || artwork;
+      previewUrl = room.songdleState.target.previewUrl || previewUrl;
+      releaseYear = room.songdleState.target.year || releaseYear;
+    }
+
+    // Keep q perfectly in sync
+    q.correctTitle = correctTitle;
+    q.correctArtist = correctArtist;
+    q.album = album;
+    q.artwork = artwork;
+    q.previewUrl = previewUrl;
+    q.releaseYear = releaseYear;
+
+    const playerResults = Array.from(room.players.values()).map(p => {
+      let isCorrect = false;
+      let displayAnswer = p.typedAnswer;
+
+      if (q.mode === 'mv') {
+        const isWinner = room.mvState && room.mvState.winner && room.mvState.winner.id === p.id;
+        const hasCorrectAttempt = room.mvState && room.mvState.history && room.mvState.history.some(h => h.playerId === p.id && h.isCorrect);
+        isCorrect = isWinner || hasCorrectAttempt || (p.answered && p.pointsEarned > 0);
+        if (room.mvState && room.mvState.history) {
+          const userGuesses = room.mvState.history.filter(h => h.playerId === p.id);
+          const winningGuess = userGuesses.find(h => h.isCorrect);
+          if (winningGuess) {
+            displayAnswer = winningGuess.text;
+          } else if (userGuesses.length > 0) {
+            displayAnswer = userGuesses[userGuesses.length - 1].text;
+          }
+        }
+      } else if (q.mode === 'songdle') {
+        const isWinner = room.songdleState && room.songdleState.winner && room.songdleState.winner.id === p.id;
+        isCorrect = isWinner || (p.answered && p.pointsEarned > 0);
+        if (room.songdleState && room.songdleState.guesses) {
+          const userGuesses = room.songdleState.guesses.filter(g => g.playerId === p.id);
+          const winningGuess = userGuesses.find(g => g.comparison && g.comparison.isVictory);
+          if (winningGuess) {
+            displayAnswer = winningGuess.track ? `${winningGuess.track.title} - ${winningGuess.track.artist}` : winningGuess.text;
+          } else if (userGuesses.length > 0) {
+            const last = userGuesses[0];
+            displayAnswer = last.track ? `${last.track.title} - ${last.track.artist}` : last.text;
+          }
+        }
+      } else if (q.mode === 'heardle') {
+        const hasCorrect = p.heardleAttempts && p.heardleAttempts.some(a => a.isCorrect);
+        isCorrect = hasCorrect || (p.answered && p.pointsEarned > 0);
+        if (p.heardleAttempts && p.heardleAttempts.length > 0) {
+          displayAnswer = p.heardleAttempts[p.heardleAttempts.length - 1].text;
+        }
+      } else if (q.mode === 'typing') {
+        isCorrect = isTypingAnswerCorrect(p.typedAnswer, correctTitle, correctArtist);
+      } else {
+        isCorrect = p.answerIndex === q.correctIndex && p.answered && !p.hasSkipped;
+      }
+
+      return {
+        id: p.id,
+        name: p.name,
+        avatar: p.avatar,
+        answered: p.answered || isCorrect,
+        answerIndex: p.answerIndex,
+        typedAnswer: displayAnswer || p.typedAnswer,
+        hasSkipped: p.hasSkipped,
+        isCorrect,
+        pointsEarned: p.pointsEarned,
+        score: p.score,
+        streak: p.streak,
+        lives: p.lives !== undefined ? p.lives : 3,
+        isEliminated: !!p.isEliminated
+      };
+    });
 
     // Handle Survival Mode deduction
     if (room.settings && room.settings.gameMode === 'survival') {
-      for (const p of room.players.values()) {
-        if (!p.isEliminated) {
-          const isCorrect = q.mode === 'typing'
-            ? isTypingAnswerCorrect(p.typedAnswer, q.correctTitle, q.correctArtist)
-            : (p.answerIndex === q.correctIndex && p.answered && !p.hasSkipped);
-
-          if (!isCorrect) {
-            p.lives = Math.max(0, (p.lives !== undefined ? p.lives : 3) - 1);
-            if (p.lives === 0) {
-              p.isEliminated = true;
-            }
+      for (const pr of playerResults) {
+        const p = room.players.get(pr.id);
+        if (p && !p.isEliminated && !pr.isCorrect) {
+          p.lives = Math.max(0, (p.lives !== undefined ? p.lives : 3) - 1);
+          pr.lives = p.lives;
+          if (p.lives === 0) {
+            p.isEliminated = true;
+            pr.isEliminated = true;
           }
         }
       }
     }
 
     const leaderboard = getLeaderboard(room);
-
-    const playerResults = Array.from(room.players.values()).map(p => ({
-      id: p.id,
-      name: p.name,
-      avatar: p.avatar,
-      answered: p.answered,
-      answerIndex: p.answerIndex,
-      typedAnswer: p.typedAnswer,
-      hasSkipped: p.hasSkipped,
-      isCorrect: q.mode === 'typing'
-        ? isTypingAnswerCorrect(p.typedAnswer, q.correctTitle, q.correctArtist)
-        : p.answerIndex === q.correctIndex,
-      pointsEarned: p.pointsEarned,
-      score: p.score,
-      streak: p.streak,
-      lives: p.lives !== undefined ? p.lives : 3,
-      isEliminated: !!p.isEliminated
-    }));
 
     let isLastQuestion = room.currentQuestionIndex + 1 >= room.questions.length;
     if (room.settings && room.settings.gameMode === 'survival') {
@@ -1615,12 +1737,12 @@ io.on('connection', (socket) => {
       correctIndex: q.correctIndex,
       options: q.options || [],
       trackInfo: {
-        title: q.correctTitle,
-        artist: q.correctArtist,
-        album: q.album,
-        artwork: q.artwork,
-        previewUrl: q.previewUrl,
-        releaseYear: q.releaseYear
+        title: correctTitle,
+        artist: correctArtist,
+        album: album,
+        artwork: artwork,
+        previewUrl: previewUrl,
+        releaseYear: releaseYear
       },
       playerResults,
       leaderboard,
