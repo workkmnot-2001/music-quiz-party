@@ -196,8 +196,96 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[Unhandled Rejection]', reason);
 });
 
+// --- Security & Input Sanitization Helpers ---
+function sanitizeInput(str, maxLen = 18) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/<[^>]*>?/gm, '') // Strip HTML tags to eliminate XSS
+    .replace(/[\x00-\x1F\x7F]/g, '') // Strip control characters
+    .trim()
+    .slice(0, maxLen);
+}
+
+function isValidRoomCode(code) {
+  return typeof code === 'string' && /^[A-Za-z0-9]{4,8}$/.test(code.trim());
+}
+
+const ALLOWED_AVATARS = new Set(['🎧', '🎸', '🎤', '🎷', '🥁', '🎹', '🕶️', '🕺', '💃', '🐱', '🦊', '🦄', '👑', '🚀', '⚡', '🌟']);
+
+// =========================================================================
+// ENTERPRISE SECURITY & ANTI-TAMPERING SUITE (Anti-XSS, Anti-Phishing, CSP)
+// =========================================================================
+
+// 1. Disable server fingerprinting
+app.disable('x-powered-by');
+
+// 2. Comprehensive Security Headers & Content Security Policy (CSP)
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  // Content Security Policy: Strict whitelist to block rogue scripts, malware domains, or iframe hijacks
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: https://* blob:",
+    "media-src 'self' https://* blob:",
+    "connect-src 'self' ws: wss: https://* http://localhost:* http://127.0.0.1:*",
+    "frame-ancestors 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; '));
+  next();
+});
+
+// 3. In-Memory Anti-DDoS & Rate Limiter Middleware
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 120;
+
+app.use('/api', (req, res, next) => {
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const clientData = requestCounts.get(clientIp) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+
+  if (now > clientData.resetAt) {
+    clientData.count = 0;
+    clientData.resetAt = now + RATE_LIMIT_WINDOW_MS;
+  }
+
+  clientData.count++;
+  requestCounts.set(clientIp, clientData);
+
+  if (clientData.count > MAX_REQUESTS_PER_WINDOW) {
+    return res.status(429).json({
+      error: 'Security Alert: Rate limit exceeded. Please wait a moment.'
+    });
+  }
+  next();
+});
+
+// Stale rate limit cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of requestCounts.entries()) {
+    if (now > data.resetAt + 60000) {
+      requestCounts.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+
 // Middleware & static files
-app.use(express.json());
+app.use(express.json({ limit: '50kb' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Detect local network IPv4 address for phones on the same Wi-Fi
@@ -226,10 +314,44 @@ app.get('/api/info', (req, res) => {
 });
 
 app.get('/api/qr', async (req, res) => {
-  const text = req.query.text;
-  if (!text) return res.status(400).json({ error: 'Missing text parameter' });
+  const rawText = req.query.text;
+  if (!rawText || typeof rawText !== 'string') {
+    return res.status(400).json({ error: 'Missing or invalid text parameter' });
+  }
+
+  // Anti-URL Tampering & Phishing Filter:
+  // Strictly enforce that the QR code link MUST target this application's own origin or local network IP
+  let isLegitUrl = false;
   try {
-    const dataUrl = await QRCode.toDataURL(text, {
+    const parsed = new URL(rawText, `http://${req.headers.host || 'localhost'}`);
+    const host = parsed.host;
+    const reqHost = req.headers.host;
+
+    const isSelfDomain = (host === reqHost) ||
+                         (host.startsWith('localhost')) ||
+                         (host.startsWith('127.0.0.1')) ||
+                         (localIP && host.includes(localIP)) ||
+                         (host.endsWith('.onrender.com'));
+
+    // Validate that the path is solely a room invitation with alphanumeric code
+    if (isSelfDomain && parsed.pathname === '/') {
+      const roomParam = parsed.searchParams.get('room') || parsed.searchParams.get('join') || '';
+      if (/^[A-Za-z0-9]{4,8}$/.test(roomParam)) {
+        isLegitUrl = true;
+      }
+    }
+  } catch (err) {
+    isLegitUrl = false;
+  }
+
+  if (!isLegitUrl) {
+    return res.status(403).json({
+      error: 'Security Warning: Destination link has been tampered with or is not authorized.'
+    });
+  }
+
+  try {
+    const dataUrl = await QRCode.toDataURL(rawText, {
       margin: 2,
       width: 260,
       color: {
@@ -400,10 +522,12 @@ io.on('connection', (socket) => {
   socket.on('create_room', async ({ name, avatar, settings }) => {
     try {
       const roomCode = generateRoomCode();
+      const sanitizedName = sanitizeInput(name, 18) || 'หัวหน้าห้อง';
+      const sanitizedAvatar = ALLOWED_AVATARS.has(avatar) ? avatar : '👑';
       const hostPlayer = {
         id: socket.id,
-        name: (name || 'หัวหน้าห้อง').trim(),
-        avatar: avatar || '👑',
+        name: sanitizedName,
+        avatar: sanitizedAvatar,
         score: 0,
         streak: 0,
         answered: false,
@@ -457,11 +581,11 @@ io.on('connection', (socket) => {
 
   // Join Room
   socket.on('join_room', ({ roomCode, name, avatar }) => {
-    if (!roomCode) {
-      return socket.emit('error_message', 'กรุณาระบุรหัสห้อง');
+    const code = (roomCode || '').trim().toUpperCase();
+    if (!isValidRoomCode(code)) {
+      return socket.emit('error_message', 'รหัสห้องไม่ถูกต้อง กรุณาตรวจสอบรหัสอีกครั้ง');
     }
 
-    const code = roomCode.trim().toUpperCase();
     const room = rooms.get(code);
 
     if (!room) {
@@ -472,16 +596,18 @@ io.on('connection', (socket) => {
       return socket.emit('error_message', 'ห้องนี้กำลังเล่นอยู่ ไม่สามารถเข้าร่วมได้ในขณะนี้');
     }
 
-    let finalName = (name || 'ผู้เล่น').trim();
+    let finalName = sanitizeInput(name, 18) || 'ผู้เล่น';
     const isNameTaken = Array.from(room.players.values()).some(p => p.name.toLowerCase() === finalName.toLowerCase());
     if (isNameTaken) {
       finalName += ` #${Math.floor(10 + Math.random() * 89)}`;
     }
 
+    const sanitizedAvatar = ALLOWED_AVATARS.has(avatar) ? avatar : '🎧';
+
     const player = {
       id: socket.id,
       name: finalName,
-      avatar: avatar || '🎧',
+      avatar: sanitizedAvatar,
       score: 0,
       streak: 0,
       answered: false,
@@ -541,11 +667,11 @@ io.on('connection', (socket) => {
     const player = room.players.get(socket.id);
     if (!player) return;
 
-    const trimmedName = (name || '').trim();
+    const trimmedName = sanitizeInput(name, 18);
     if (trimmedName) {
-      player.name = trimmedName.slice(0, 18);
+      player.name = trimmedName;
     }
-    if (avatar) {
+    if (avatar && ALLOWED_AVATARS.has(avatar)) {
       player.avatar = avatar;
     }
 

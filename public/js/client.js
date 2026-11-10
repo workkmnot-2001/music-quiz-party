@@ -58,6 +58,17 @@
     return true;
   }
 
+  // Security Helper: Escape HTML to prevent XSS / Code Injection
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // --- DOM Elements ---
   const screens = {
     home: document.getElementById('screen-home'),
@@ -407,9 +418,12 @@
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('room') || urlParams.get('join');
     if (code) {
-      roomCodeInput.value = code.toUpperCase().trim();
-      switchToTab('join');
-      showToast(`🔑 ตรวจพบรหัสห้อง ${code.toUpperCase()}! ใส่ชื่อแล้วกดเข้าร่วมได้เลย`);
+      const sanitized = code.replace(/[^A-Za-z0-9]/g, '').slice(0, 8).toUpperCase();
+      if (sanitized) {
+        roomCodeInput.value = sanitized;
+        switchToTab('join');
+        showToast(`🔑 ตรวจพบรหัสห้อง ${sanitized}! ใส่ชื่อแล้วกดเข้าร่วมได้เลย`);
+      }
     }
   }
 
@@ -715,17 +729,19 @@
 
   // --- Copy & Share Helpers ---
   function getInviteUrl() {
-    return `${window.location.origin}/?room=${currentRoom.code}`;
+    const cleanCode = (currentRoom.code || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8);
+    return `${window.location.origin}/?room=${cleanCode}`;
   }
 
   function getNetworkInviteUrl() {
+    const cleanCode = (currentRoom.code || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8);
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return getInviteUrl();
+      return `${window.location.origin}/?room=${cleanCode}`;
     }
     if (currentRoom.localIP && currentRoom.localIP !== 'localhost') {
-      return `http://${currentRoom.localIP}:${currentRoom.port}/?room=${currentRoom.code}`;
+      return `http://${currentRoom.localIP}:${currentRoom.port}/?room=${cleanCode}`;
     }
-    return getInviteUrl();
+    return `${window.location.origin}/?room=${cleanCode}`;
   }
 
   function copyRoomCode() {
@@ -1804,7 +1820,7 @@
         <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
           <div style="display:flex; align-items:center; gap:0.5rem; min-width:0;">
             <span style="font-size: 1.35rem;">${myPlayer.avatar}</span>
-            <span class="sidebar-player-name" style="max-width:110px;">${myPlayer.name}</span>
+            <span class="sidebar-player-name" style="max-width:110px;">${escapeHTML(myPlayer.name)}</span>
           </div>
           <button type="button" class="btn-pencil-edit" id="btn-prejoin-pencil" title="แก้ไขชื่อและอวาตาร์">✏️</button>
         </div>
@@ -1843,7 +1859,7 @@
           <div style="min-width:0;">
             <div style="display:flex; align-items:center; gap:4px;">
               <span class="sidebar-player-name">
-                ${p.name} ${p.isHost ? '👑' : ''} ${isYou ? '<span class="you-badge">(คุณ)</span>' : ''}
+                ${escapeHTML(p.name)} ${p.isHost ? '👑' : ''} ${isYou ? '<span class="you-badge">(คุณ)</span>' : ''}
               </span>
               ${isYou && (!currentRoom.state || currentRoom.state === 'lobby') ? '<button type="button" class="btn-pencil-edit" id="btn-room-pencil" title="แก้ไขชื่อและอวาตาร์">✏️</button>' : ''}
             </div>
@@ -1921,7 +1937,7 @@
         <div class="player-rank-col">
           <span class="rank-badge">${rankText}</span>
           <span style="font-size: 1.3rem;">${item.avatar}</span>
-          <strong style="color: #fff;">${item.name} ${item.id === socket.id ? '(คุณ)' : ''}</strong>
+          <strong style="color: #fff;">${escapeHTML(item.name)} ${item.id === socket.id ? '(คุณ)' : ''}</strong>
         </div>
         <div class="player-score-col">
           <div class="score-num">${item.score.toLocaleString()} pts</div>
@@ -2210,7 +2226,7 @@
                 <img src="${(g.track && g.track.artwork) || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'}" class="cell-art" alt="">
                 <div style="min-width:0; text-align:left;">
                   <div class="cell-val" style="font-size:0.82rem; font-weight:800;">${comp.song.value}</div>
-                  ${!isSingle ? `<div style="font-size:0.68rem; color:rgba(255,255,255,0.7);">${g.playerAvatar || '🎧'} ${g.playerName || 'ผู้เล่น'}</div>` : ''}
+                  ${!isSingle ? `<div style="font-size:0.68rem; color:rgba(255,255,255,0.7);">${g.playerAvatar || '🎧'} ${escapeHTML(g.playerName || 'ผู้เล่น')}</div>` : ''}
                 </div>
               </div>
             </td>
@@ -2256,7 +2272,7 @@
         if (inputCard) inputCard.style.display = 'none';
 
         const winnerLabel = state.winner
-          ? `${state.winner.avatar} <strong>${state.winner.name}</strong> ทายถูกต้องสมบูรณ์แบบ!`
+          ? `${state.winner.avatar} <strong>${escapeHTML(state.winner.name)}</strong> ทายถูกต้องสมบูรณ์แบบ!`
           : '🎉 ทายถูกต้องสมบูรณ์แบบ!';
 
         resultCard.innerHTML = `
@@ -2661,13 +2677,13 @@
         if (h) {
           if (h.isCorrect) {
             slot.className = 'heardle-slot correct';
-            slot.innerHTML = `<span>🎉 ${h.text}</span><span>${!isSingle ? `${h.playerAvatar} ${h.playerName} ` : ''}🟩 ถูกต้อง!</span>`;
+            slot.innerHTML = `<span>🎉 ${escapeHTML(h.text)}</span><span>${!isSingle ? `${h.playerAvatar} ${escapeHTML(h.playerName)} ` : ''}🟩 ถูกต้อง!</span>`;
           } else if (h.isSkipped) {
             slot.className = 'heardle-slot skipped';
-            slot.innerHTML = `<span>⏭️ ข้าม</span><span>${!isSingle ? `${h.playerAvatar} ${h.playerName} ` : ''}(+เพิ่มเวลา)</span>`;
+            slot.innerHTML = `<span>⏭️ ข้าม</span><span>${!isSingle ? `${h.playerAvatar} ${escapeHTML(h.playerName)} ` : ''}(+เพิ่มเวลา)</span>`;
           } else {
             slot.className = 'heardle-slot wrong';
-            slot.innerHTML = `<span>❌ ${h.text}</span><span>${!isSingle ? `${h.playerAvatar} ${h.playerName} ` : ''}ไม่ถูกต้อง</span>`;
+            slot.innerHTML = `<span>❌ ${escapeHTML(h.text)}</span><span>${!isSingle ? `${h.playerAvatar} ${escapeHTML(h.playerName)} ` : ''}ไม่ถูกต้อง</span>`;
           }
         } else {
           slot.className = 'heardle-slot';
@@ -2685,7 +2701,7 @@
         if (inputCard) inputCard.style.display = 'none';
 
         const winnerLabel = state.winner
-          ? `${state.winner.avatar} <strong>${state.winner.name}</strong> ทายเพลงจาก MV ถูกต้องสมบูรณ์แบบ!`
+          ? `${state.winner.avatar} <strong>${escapeHTML(state.winner.name)}</strong> ทายเพลงจาก MV ถูกต้องสมบูรณ์แบบ!`
           : '🎉 ทายเพลงจาก MV ถูกต้องสมบูรณ์แบบ!';
 
         resultCard.innerHTML = `
