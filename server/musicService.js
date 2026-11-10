@@ -786,7 +786,7 @@ function resolveSubcategories(selectedIds = []) {
 }
 
 // Get pool of tracks for selected categories with smart batching, strict deduplication, and diversity enforcement
-async function getTracksForSelection(selection = ['mix']) {
+async function getTracksForSelection(selection = ['mix'], count = 10) {
   let targetSubs = resolveSubcategories(selection);
   const allTracks = [];
   const seenNormTitles = new Set();
@@ -797,23 +797,25 @@ async function getTracksForSelection(selection = ['mix']) {
     targetSubs = [...targetSubs].sort(() => Math.random() - 0.5).slice(0, 6);
   }
 
-  // Ensure plenty of diverse queries (artists) are picked:
-  // If only 1 subcategory selected (e.g. kpop_bg): pick up to 8-10 different artists
-  // If multiple subcategories selected: pick 2-3 artists each
-  const totalQueriesTarget = Math.max(8, targetSubs.length * 2);
-  const queriesPerSub = Math.max(1, Math.ceil(totalQueriesTarget / targetSubs.length));
+  // Ensure plenty of diverse queries (artists) are picked based on requested count:
+  // If count is 20, we need at least 40-50 candidate tracks
+  const totalQueriesTarget = Math.max(12, Math.ceil(count * 1.6), targetSubs.length * 3);
+  const queriesPerSub = Math.min(
+    Math.max(...targetSubs.map(s => s.queries.length)),
+    Math.max(3, Math.ceil(totalQueriesTarget / targetSubs.length))
+  );
 
   const queryTasks = [];
   for (const sub of targetSubs) {
     const shuffledQueries = [...sub.queries].sort(() => Math.random() - 0.5);
-    const selectedQueries = shuffledQueries.slice(0, queriesPerSub);
+    const selectedQueries = shuffledQueries.slice(0, Math.min(sub.queries.length, queriesPerSub));
     for (const q of selectedQueries) {
       queryTasks.push({ query: q, country: sub.country, sub });
     }
   }
 
-  // Execute in batches of 3 with short cooldown to guarantee 0 rate limit errors
-  const batchSize = 3;
+  // Execute in batches of 4 with short cooldown to guarantee 0 rate limit errors
+  const batchSize = 4;
   for (let i = 0; i < queryTasks.length; i += batchSize) {
     const batch = queryTasks.slice(i, i + batchSize);
     const results = await Promise.all(batch.map(task => fetchTracksForQuery(task.query, task.country)));
@@ -839,13 +841,13 @@ async function getTracksForSelection(selection = ['mix']) {
         });
 
         songsAddedForThisArtist++;
-        // Limit to 2 distinct songs per artist query in the initial pool to guarantee variety!
-        if (songsAddedForThisArtist >= 2) break;
+        // Limit to 3 distinct songs per artist query in the initial pool to guarantee variety!
+        if (songsAddedForThisArtist >= 3) break;
       }
     });
 
     if (i + batchSize < queryTasks.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 40));
     }
   }
 
@@ -868,33 +870,54 @@ function generateHintsForTrack(track) {
 
 // Generate quiz questions
 async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode = 'choices', questionTarget = 'mixed') {
-  let pool = await getTracksForSelection(selection);
+  let pool = await getTracksForSelection(selection, count);
 
   const firstCat = selection[0] || 'mix';
   let targetMainId = 'mix';
   let defaultCategoryName = '🔀 มิกซ์รวมทุกหมวด';
-  if (firstCat.startsWith('kpop')) {
-    targetMainId = 'kpop';
-    defaultCategoryName = '✨ เพลง K-Pop';
-  } else if (firstCat.startsWith('thai') || firstCat === 'tpop' || firstCat === 'lukthung') {
+  let specificSeeds = null;
+
+  if (firstCat === 'lukthung') {
+    targetMainId = 'lukthung';
+    defaultCategoryName = '🌾 ลูกทุ่ง & เพื่อชีวิต';
+    specificSeeds = seedData['lukthung'];
+  } else if (firstCat === 'tpop') {
+    targetMainId = 'tpop';
+    defaultCategoryName = '💫 T-Pop ไอดอล';
+    specificSeeds = seedData['tpop'];
+  } else if (firstCat === 'thai_poprock') {
+    targetMainId = 'thai_poprock';
+    defaultCategoryName = '🎸 ป๊อป & ร็อกคลาสสิก';
+    specificSeeds = seedData['thai_poprock'] || seedData['thai'];
+  } else if (firstCat.startsWith('thai')) {
     targetMainId = 'thai';
     defaultCategoryName = '🇹🇭 เพลงไทย';
+    specificSeeds = seedData['thai'];
+  } else if (firstCat.startsWith('kpop')) {
+    targetMainId = 'kpop';
+    defaultCategoryName = '✨ เพลง K-Pop';
+    specificSeeds = seedData['kpop'];
   } else if (firstCat.startsWith('inter')) {
     targetMainId = 'inter';
     defaultCategoryName = '🌍 เพลงสากล';
+    specificSeeds = seedData['inter'];
   } else if (firstCat.startsWith('anime') || firstCat === 'jpop_hits') {
     targetMainId = 'anime';
     defaultCategoryName = '🎌 เพลงการ์ตูน & อนิเมะ';
+    specificSeeds = seedData['anime'];
   } else if (firstCat.startsWith('latest')) {
     targetMainId = 'latest';
     defaultCategoryName = '🔥 เพลงฮิตล่าสุด';
+    specificSeeds = Object.values(seedData).flat();
   }
 
   // If pool has fewer than count * 2 songs (e.g. rate limit 429 or network hitch), inject category-specific seed songs
   if (pool.length < Math.max(12, count * 2)) {
-    const seedsToInject = targetMainId === 'mix'
-      ? Object.values(seedData).flat()
-      : (seedData[targetMainId] || seedData['kpop'] || []);
+    const seedsToInject = specificSeeds || (
+      targetMainId === 'mix'
+        ? Object.values(seedData).flat()
+        : (seedData[targetMainId] || seedData['thai'] || [])
+    );
 
     const existingKeys = new Set(pool.map(t => normalizeSongKey(t.title)));
     for (const seedTrack of seedsToInject) {
@@ -1215,9 +1238,9 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
         }
       }
 
-      // 3. Fallback from seed data if pool is small
+      // 3. Fallback from category-specific seed data if pool is small
       if (wrongOptions.length < 3) {
-        const seeds = Object.values(seedData).flat();
+        const seeds = specificSeeds || (targetMainId === 'mix' ? Object.values(seedData).flat() : (seedData[targetMainId] || []));
         const shuffledSeeds = seeds.sort(() => Math.random() - 0.5);
         for (const t of shuffledSeeds) {
           const tTitle = convertToEnglishIfNeeded(t.title);
@@ -1236,7 +1259,10 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
       // 4. Absolute fallback if somehow still needed
       let fallbackIdx = 1;
       while (wrongOptions.length < 3) {
-        const dummy = track.mainId === 'thai' ? `เพลงตัวอย่าง ${fallbackIdx} - ศิลปินตัวอย่าง` : `Sample Song ${fallbackIdx} - Sample Artist`;
+        let dummy = `เพลงตัวอย่าง ${fallbackIdx} - ศิลปินตัวอย่าง`;
+        if (firstCat === 'lukthung') dummy = `เพลงลูกทุ่งยอดฮิต ${fallbackIdx} - รวมศิลปินลูกทุ่ง`;
+        else if (firstCat === 'tpop') dummy = `T-Pop Song ${fallbackIdx} - T-Pop Idol`;
+        else if (track.mainId === 'inter') dummy = `Sample Song ${fallbackIdx} - Sample Artist`;
         wrongOptions.push(dummy);
         fallbackIdx++;
       }
