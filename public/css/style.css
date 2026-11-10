@@ -422,12 +422,13 @@ body {
 }
 
 .edit-profile-card {
-  max-width: 560px;
-  width: 95%;
-  padding: 1.75rem 2rem;
+  max-width: 650px !important;
+  width: 95% !important;
+  padding: 2rem 2.25rem !important;
   background: linear-gradient(180deg, rgba(22, 25, 36, 0.98) 0%, rgba(10, 12, 16, 0.99) 100%);
-  border: 1.5px solid rgba(212, 175, 55, 0.3);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(245, 197, 66, 0.18);
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(245, 197, 66, 0.22);
+  border-radius: 20px !important;
 }
 
 .sidebar-footer {
@@ -774,17 +775,33 @@ body {
   transform: scale(1.15);
 }
 
-/* Modal Edit Profile Custom Sizing & Grid (Full Width & No Overflow) */
+/* Modal Edit Profile Custom Sizing & Grid (Spacious, No Overflow) */
+.form-group-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.35rem;
+}
+
+.modal-field-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+  display: block;
+  letter-spacing: 0.2px;
+}
+
 #edit-name-input {
   width: 100% !important;
   box-sizing: border-box !important;
   height: 48px;
-  font-size: 1rem;
+  font-size: 1.05rem;
   background: rgba(14, 16, 22, 0.85);
-  border: 1.5px solid rgba(212, 175, 55, 0.28);
+  border: 1.5px solid rgba(212, 175, 55, 0.3);
   color: #fff;
-  border-radius: var(--radius-md);
-  padding: 0 1.15rem;
+  border-radius: 12px;
+  padding: 0 1.25rem;
   transition: all 0.2s ease;
 }
 
@@ -797,21 +814,21 @@ body {
 #edit-avatar-grid {
   display: grid !important;
   grid-template-columns: repeat(8, 1fr) !important;
-  gap: 0.55rem !important;
+  gap: 0.65rem !important;
   width: 100% !important;
   box-sizing: border-box !important;
-  margin-top: 0.65rem;
+  margin-top: 0.4rem;
 }
 
 #edit-avatar-grid .avatar-btn {
   width: 100% !important;
-  height: 50px !important;
+  height: 56px !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  font-size: 1.45rem !important;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(212, 175, 55, 0.2);
+  font-size: 1.6rem !important;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(212, 175, 55, 0.22);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -820,7 +837,7 @@ body {
 }
 
 #edit-avatar-grid .avatar-btn:hover {
-  background: rgba(245, 197, 66, 0.18);
+  background: rgba(245, 197, 66, 0.2);
   border-color: #f5c542;
   transform: translateY(-2px) scale(1.08);
   box-shadow: 0 4px 14px rgba(245, 197, 66, 0.35);
@@ -828,19 +845,22 @@ body {
 
 #edit-avatar-grid .avatar-btn.selected {
   border-color: #f5c542;
-  background: linear-gradient(135deg, rgba(245, 197, 66, 0.32), rgba(184, 134, 11, 0.12));
-  box-shadow: 0 0 16px rgba(245, 197, 66, 0.5), inset 0 0 8px rgba(245, 197, 66, 0.2);
-  transform: scale(1.1);
+  background: linear-gradient(135deg, rgba(245, 197, 66, 0.35), rgba(184, 134, 11, 0.15));
+  box-shadow: 0 0 18px rgba(245, 197, 66, 0.55), inset 0 0 8px rgba(245, 197, 66, 0.25);
+  transform: scale(1.08);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
+  .edit-profile-card {
+    padding: 1.5rem !important;
+  }
   #edit-avatar-grid {
     grid-template-columns: repeat(4, 1fr) !important;
-    gap: 0.45rem !important;
+    gap: 0.5rem !important;
   }
   #edit-avatar-grid .avatar-btn {
-    height: 44px !important;
-    font-size: 1.25rem !important;
+    height: 48px !important;
+    font-size: 1.35rem !important;
   }
 }
 

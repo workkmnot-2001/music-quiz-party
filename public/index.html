@@ -905,29 +905,31 @@
   <!-- Edit Profile Modal (Name & Avatar) -->
   <div id="modal-edit-profile" class="modal-overlay">
     <div class="modal-card edit-profile-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-        <h3 style="color:#fff; font-size:1.2rem; font-weight:800; margin:0;">✏️ แก้ไขชื่อ & อวาตาร์</h3>
-        <button id="btn-close-edit-modal" class="icon-btn" style="width:32px; height:32px;" title="ปิด">✕</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid rgba(212,175,55,0.15); padding-bottom:0.75rem;">
+        <h3 style="color:#fff; font-size:1.3rem; font-weight:800; margin:0; display:flex; align-items:center; gap:0.5rem;">
+          <span>✏️</span> แก้ไขชื่อ & อวาตาร์
+        </h3>
+        <button id="btn-close-edit-modal" class="icon-btn" style="width:36px; height:36px; font-size:1.1rem;" title="ปิด">✕</button>
       </div>
 
       <div class="edit-profile-body" style="text-align:left;">
-        <div class="form-group-compact" style="margin-bottom:1rem;">
-          <label class="compact-label" for="edit-name-input">👤 ชื่อของคุณในเกม (Player Name):</label>
-          <input type="text" id="edit-name-input" class="input-field" placeholder="ใส่ชื่อเล่นของคุณ..." maxlength="15" style="margin-top:0.35rem; width:100%;">
+        <div class="form-group-modal">
+          <label class="modal-field-label" for="edit-name-input">👤 ชื่อของคุณในเกม (Player Name):</label>
+          <input type="text" id="edit-name-input" class="input-field" placeholder="ใส่ชื่อเล่นของคุณ..." maxlength="15">
         </div>
 
-        <div class="form-group-compact" style="margin-bottom:1.25rem;">
-          <label class="compact-label">🎭 เลือกอวาตาร์ประจำตัว (Avatar):</label>
-          <div class="avatar-grid compact-avatars" id="edit-avatar-grid" style="margin-top:0.5rem;">
+        <div class="form-group-modal">
+          <label class="modal-field-label">🎭 เลือกอวาตาร์ประจำตัว (Avatar):</label>
+          <div class="avatar-grid" id="edit-avatar-grid">
             <!-- Rendered via JS -->
           </div>
         </div>
 
-        <div style="display:flex; gap:0.75rem; margin-top:1.25rem;">
-          <button id="btn-save-edit-profile" class="btn-primary" style="margin-top:0; flex:1;">
+        <div style="display:flex; gap:0.85rem; margin-top:1.5rem;">
+          <button id="btn-save-edit-profile" class="btn-primary" style="margin-top:0; flex:1; height:48px; font-size:1rem; font-weight:800;">
             💾 บันทึก
           </button>
-          <button id="btn-cancel-edit-profile" class="btn-secondary" style="margin-top:0;">
+          <button id="btn-cancel-edit-profile" class="btn-secondary" style="margin-top:0; height:48px; padding:0 1.5rem; font-size:0.95rem;">
             ยกเลิก
           </button>
         </div>
