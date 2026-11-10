@@ -2326,35 +2326,35 @@
             <td>
               <div class="songdle-cell cell-${comp.song.status} songdle-cell-song">
                 <img src="${(g.track && g.track.artwork) || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'}" class="cell-art" alt="">
-                <div style="min-width:0; text-align:left;">
-                  <div class="cell-val" style="font-size:0.82rem; font-weight:800;">${comp.song.value}</div>
-                  ${!isSingle ? `<div style="font-size:0.68rem; color:rgba(255,255,255,0.7);">${g.playerAvatar || '🎧'} ${escapeHTML(g.playerName || 'ผู้เล่น')}</div>` : ''}
+                <div class="songdle-song-text">
+                  <div class="cell-val">${escapeHTML(comp.song.value)}</div>
+                  ${!isSingle ? `<div class="songdle-player-tag">${g.playerAvatar || '🎧'} ${escapeHTML(g.playerName || 'ผู้เล่น')}</div>` : ''}
                 </div>
               </div>
             </td>
             <td>
               <div class="songdle-cell cell-${comp.artist.status}">
-                <span class="cell-val">${comp.artist.value}</span>
+                <span class="cell-val">${escapeHTML(comp.artist.value)}</span>
               </div>
             </td>
             <td>
               <div class="songdle-cell cell-${comp.artistType.status}">
-                <span class="cell-val">${comp.artistType.value}</span>
+                <span class="cell-val">${escapeHTML(comp.artistType.value)}</span>
               </div>
             </td>
             <td>
               <div class="songdle-cell cell-${comp.genre.status}">
-                <span class="cell-val">${comp.genre.value}</span>
+                <span class="cell-val">${escapeHTML(comp.genre.value)}</span>
               </div>
             </td>
             <td>
               <div class="songdle-cell cell-${comp.country.status}">
-                <span class="cell-val">${comp.country.value}</span>
+                <span class="cell-val">${escapeHTML(comp.country.value)}</span>
               </div>
             </td>
             <td>
               <div class="songdle-cell cell-${comp.year.status}">
-                <span class="cell-val">${comp.year.value}</span>
+                <span class="cell-val">${escapeHTML(comp.year.value)}</span>
                 ${yearArrow}
               </div>
             </td>
@@ -3479,33 +3479,35 @@
     tr.innerHTML = `
       <td>
         <div class="songdle-cell ${res.song.status === 'green' ? 'cell-green' : 'cell-red'} songdle-cell-song">
-          <img src="${res.song.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'}" alt="">
-          <span style="font-size:0.8rem; line-height:1.2;">${res.song.value}</span>
+          <img src="${res.song.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'}" class="cell-art" alt="">
+          <div class="songdle-song-text">
+            <span class="cell-val">${escapeHTML(res.song.value)}</span>
+          </div>
         </div>
       </td>
       <td>
         <div class="songdle-cell ${res.artist.status === 'green' ? 'cell-green' : (res.artist.status === 'orange' ? 'cell-orange' : 'cell-red')}">
-          ${res.artist.value}
+          <span class="cell-val">${escapeHTML(res.artist.value)}</span>
         </div>
       </td>
       <td>
         <div class="songdle-cell ${res.artistType.status === 'green' ? 'cell-green' : 'cell-red'}">
-          ${res.artistType.value}
+          <span class="cell-val">${escapeHTML(res.artistType.value)}</span>
         </div>
       </td>
       <td>
         <div class="songdle-cell ${res.genre.status === 'green' ? 'cell-green' : (res.genre.status === 'orange' ? 'cell-orange' : 'cell-red')}">
-          ${res.genre.value}
+          <span class="cell-val">${escapeHTML(res.genre.value)}</span>
         </div>
       </td>
       <td>
         <div class="songdle-cell ${res.country.status === 'green' ? 'cell-green' : 'cell-red'}">
-          ${res.country.value}
+          <span class="cell-val">${escapeHTML(res.country.value)}</span>
         </div>
       </td>
       <td>
         <div class="songdle-cell ${res.year.status === 'green' ? 'cell-green' : 'cell-red'}">
-          <span>${res.year.value}</span>
+          <span class="cell-val">${escapeHTML(res.year.value)}</span>
           <span class="cell-arrow-icon">${yearIcon}</span>
         </div>
       </td>

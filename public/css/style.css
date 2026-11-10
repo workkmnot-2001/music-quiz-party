@@ -62,6 +62,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  letter-spacing: 0.25px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Ambient Glowing Background Mesh */
@@ -460,12 +464,21 @@ body {
    ========================================================================== */
 .game-main-area {
   flex: 1;
-  padding: 1.5rem;
-  max-width: 850px;
+  padding: 1.75rem 2.25rem;
+  max-width: 1180px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .game-main-area {
+    max-width: 1280px;
+    padding: 2rem 2.5rem;
+  }
 }
 
 /* Glass Panels */
@@ -474,9 +487,10 @@ body {
   backdrop-filter: blur(18px);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
-  padding: 1.75rem;
+  padding: 2.25rem 2.5rem;
   box-shadow: var(--shadow-card);
   animation: fadeIn 0.35s ease;
+  width: 100%;
 }
 
 @keyframes fadeIn {
@@ -1430,38 +1444,39 @@ body {
 
 .question-prompt-box {
   text-align: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .question-text {
-  font-size: 1.35rem;
+  font-size: 1.55rem;
   font-weight: 800;
   color: #fff;
-  line-height: 1.35;
+  line-height: 1.45;
+  letter-spacing: 0.3px;
 }
 
 /* Choices Grid */
 .choices-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.85rem;
-  margin-bottom: 1.25rem;
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
 }
 
 .choice-btn {
-  min-height: 75px;
-  padding: 0.85rem 1.15rem;
+  min-height: 84px;
+  padding: 1.1rem 1.4rem;
   border-radius: var(--radius-md);
   border: 2px solid transparent;
   color: #fff;
   font-family: var(--font-main);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.9rem;
   text-align: left;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
   position: relative;
@@ -1484,15 +1499,15 @@ body {
 }
 
 .choice-badge {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -1500,7 +1515,9 @@ body {
 .choice-text {
   flex: 1;
   word-break: break-word;
-  line-height: 1.25;
+  line-height: 1.45;
+  font-size: 1.05rem;
+  letter-spacing: 0.2px;
 }
 
 .choice-btn:hover:not(:disabled) {
@@ -3031,85 +3048,102 @@ body {
 .songdle-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.15rem;
 }
 
 .legend-badge {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
+  line-height: 1.45;
+  letter-spacing: 0.25px;
 }
 
 .legend-badge.leg-green {
   background: rgba(16, 185, 129, 0.2);
   color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
 .legend-badge.leg-orange {
   background: rgba(245, 158, 11, 0.2);
   color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
 .legend-badge.leg-red {
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .legend-badge.leg-arrow {
   background: rgba(168, 85, 247, 0.2);
   color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.35);
+  border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
 .songdle-table-container {
   overflow-x: auto;
   margin-bottom: 1.5rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-glass);
-  background: rgba(15, 17, 36, 0.6);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1.5px solid var(--border-glass);
+  background: rgba(12, 14, 22, 0.75);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  padding: 0.75rem;
 }
 
 .songdle-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 6px;
-  min-width: 680px;
-  padding: 0.5rem;
+  border-spacing: 8px 10px;
+  min-width: 820px;
+  padding: 0.25rem;
 }
 
 .songdle-table th {
-  padding: 0.65rem 0.5rem;
-  font-size: 0.78rem;
+  padding: 0.85rem 0.6rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--text-muted);
+  color: #e2e8f0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
+  line-height: 1.45;
+  white-space: nowrap;
 }
 
 .songdle-cell {
-  height: 64px;
-  padding: 0.4rem 0.6rem;
+  min-height: 72px;
+  height: auto;
+  padding: 0.65rem 0.75rem;
   border-radius: var(--radius-md);
   text-align: center;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 700;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   color: #fff;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   animation: tileFlip 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  line-height: 1.45;
+  letter-spacing: 0.2px;
+}
+
+.songdle-cell .cell-val {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: break-word;
+  letter-spacing: 0.2px;
 }
 
 @keyframes tileFlip {
@@ -3142,34 +3176,70 @@ body {
 }
 
 .songdle-cell-song {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: left;
-  justify-content: flex-start;
-  padding-left: 0.6rem;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.85rem !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  padding: 0.65rem 0.85rem !important;
+  min-height: 72px;
+  height: auto;
 }
 
 .songdle-cell-song img,
 .cell-art {
-  width: 42px !important;
-  height: 42px !important;
-  border-radius: 6px;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  border-radius: 8px;
   object-fit: cover !important;
   display: block;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.songdle-song-text {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.songdle-song-text .cell-val {
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.4;
+  word-break: break-word;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+
+.songdle-song-text .songdle-player-tag {
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .cell-arrow-icon {
-  font-size: 1.1rem;
-  font-weight: 900;
-  line-height: 1;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .songdle-empty-notice {
   text-align: center;
   padding: 2.5rem 1rem;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--text-muted);
 }
 
@@ -3177,111 +3247,115 @@ body {
    SONGDLE: ENHANCED GAMEPLAY STYLES
    =================================================== */
 .songdle-turn-banner {
-  background: rgba(30, 27, 75, 0.85);
-  border: 1.5px solid rgba(168, 85, 247, 0.4);
+  background: rgba(22, 25, 36, 0.88);
+  border: 1.5px solid var(--border-glass);
   border-radius: var(--radius-lg);
-  padding: 0.85rem 1.25rem;
+  padding: 1rem 1.35rem;
   margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   transition: all 0.3s ease;
 }
 
 .songdle-turn-banner.my-turn {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(168, 85, 247, 0.3));
-  border-color: var(--accent-pink);
-  box-shadow: 0 0 25px rgba(236, 72, 153, 0.45);
+  background: linear-gradient(135deg, rgba(245, 197, 66, 0.18), rgba(22, 25, 36, 0.9));
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 25px rgba(245, 197, 66, 0.35);
   animation: pulseTurn 2s infinite ease-in-out;
 }
 
 @keyframes pulseTurn {
-  0%, 100% { border-color: rgba(236, 72, 153, 0.6); box-shadow: 0 0 15px rgba(236, 72, 153, 0.3); }
-  50% { border-color: #f472b6; box-shadow: 0 0 30px rgba(236, 72, 153, 0.65); }
+  0%, 100% { border-color: rgba(245, 197, 66, 0.4); box-shadow: 0 0 15px rgba(245, 197, 66, 0.2); }
+  50% { border-color: #f5c542; box-shadow: 0 0 30px rgba(245, 197, 66, 0.5); }
 }
 
 .songdle-turn-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   min-width: 0;
 }
 
 .songdle-turn-avatar {
-  font-size: 1.8rem;
+  font-size: 2rem;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .songdle-turn-text {
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   color: #fff;
-  line-height: 1.35;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
 }
 
 .songdle-turn-text small {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-secondary);
+  line-height: 1.4;
+  margin-top: 2px;
 }
 
 .songdle-hints-deck {
-  background: rgba(15, 17, 36, 0.75);
+  background: rgba(16, 18, 26, 0.85);
   border: 1.5px solid var(--border-glass);
   border-radius: var(--radius-lg);
-  padding: 1.1rem;
+  padding: 1.25rem 1.4rem;
   margin-bottom: 1.25rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .songdle-hints-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  color: #e2e8f0;
+  color: #f1f5f9;
+  letter-spacing: 0.2px;
 }
 
 .songdle-hints-badge {
   background: rgba(245, 158, 11, 0.2);
   border: 1px solid var(--accent-yellow);
   color: #fef08a;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.75rem;
   border-radius: var(--radius-full);
 }
 
 .songdle-hints-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
 }
 
 .songdle-hint-card {
-  padding: 0.65rem 0.85rem;
+  padding: 0.85rem 1rem;
   border-radius: var(--radius-md);
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
 .songdle-hint-card.locked {
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px dashed rgba(255, 255, 255, 0.15);
   color: var(--text-muted);
 }
 
 .songdle-hint-card.unlocked {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(168, 85, 247, 0.15));
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(22, 25, 36, 0.9));
   border: 1.5px solid rgba(245, 158, 11, 0.6);
   color: #fef08a;
   box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
@@ -3289,7 +3363,7 @@ body {
 }
 
 .songdle-hint-icon {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 
@@ -3299,17 +3373,22 @@ body {
 }
 
 .songdle-hint-title {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1.35;
+  margin-bottom: 2px;
 }
 
 .songdle-hint-val {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #fff;
-  white-space: nowrap;
+  line-height: 1.4;
+  word-break: break-word;
+}
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -3491,29 +3570,29 @@ body {
 /* MV Quiz Clean Spacing & Enhanced Turn Layout */
 #mv-quiz-container {
   width: 100%;
-  max-width: 680px;
+  max-width: 880px;
   margin: 0 auto;
 }
 
 #mv-quiz-container .mv-video-box {
-  margin-bottom: 0.85rem;
-  padding: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
 }
 
 #mv-quiz-container .mv-video-wrapper {
-  margin: 0 auto 0.75rem;
+  margin: 0 auto 0.85rem;
   width: 100%;
-  max-width: 640px;
+  max-width: 800px;
   aspect-ratio: 16 / 9;
   height: auto;
-  max-height: 320px;
+  max-height: 420px;
 }
 
 #mv-quiz-container .heardle-attempts-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.85rem;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
 }
 
 @media (max-width: 600px) {
@@ -3523,7 +3602,8 @@ body {
 }
 
 #mv-quiz-container .heardle-slot {
-  padding: 0.55rem 0.85rem;
-  font-size: 0.8rem;
-  min-height: 40px;
+  padding: 0.65rem 0.95rem;
+  font-size: 0.88rem;
+  min-height: 44px;
+  line-height: 1.4;
 }
