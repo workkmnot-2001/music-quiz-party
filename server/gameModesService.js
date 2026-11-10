@@ -170,17 +170,26 @@ function getArtistMetadata(artistName = '', mainId = 'mix') {
 // Curated Verified Music Videos (90+ real 1080p preview videos across Thai, K-Pop, Pop, J-Pop)
 const CURATED_MUSIC_VIDEOS = require('./curatedMVs.json');
 
+// Comprehensive Preloaded Catalog (150+ iconic songs across Thai, K-Pop, Inter, Anime)
+let COMPREHENSIVE_CATALOG = [];
+try {
+  COMPREHENSIVE_CATALOG = require('./comprehensiveCatalog.json');
+} catch (e) {
+  COMPREHENSIVE_CATALOG = [];
+}
+
 // In-Memory Catalog for Songdle and Heardle
 let enrichedCatalog = [];
 
 function buildSongdleCatalog(tracks = []) {
   const map = new Map();
 
-  for (const t of tracks) {
-    if (!t.title || !t.artist) continue;
+  // Helper to register track into catalog map
+  function registerTrack(t) {
+    if (!t || !t.title || !t.artist) return;
     const cleanTitle = t.title.trim();
     const cleanArtist = t.artist.trim();
-    const id = t.id || `${cleanArtist}_${cleanTitle}`.toLowerCase().replace(/[\s\-_]/g, '');
+    const id = t.id || `${cleanArtist}_${cleanTitle}`.toLowerCase().replace(/[\s\-_.,'"!?:;()\[\]]/g, '');
 
     if (!map.has(id)) {
       const meta = getArtistMetadata(cleanArtist, t.mainId);
@@ -193,34 +202,23 @@ function buildSongdleCatalog(tracks = []) {
         album: t.album || '',
         artwork: t.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
         previewUrl: t.previewUrl || '',
-        artistType: meta.type,
-        genre: meta.genre,
-        country: meta.country,
+        artistType: t.artistType || meta.type,
+        genre: t.genre || meta.genre,
+        country: t.country || meta.country,
         year: year || 2021,
-        displayText: `${cleanTitle} - ${cleanArtist}`
+        displayText: t.displayText || `${cleanTitle} - ${cleanArtist}`
       });
     }
   }
 
-  // Also include the MVs as guessable items
-  for (const mv of CURATED_MUSIC_VIDEOS) {
-    if (!map.has(mv.id)) {
-      const meta = getArtistMetadata(mv.artist);
-      map.set(mv.id, {
-        id: mv.id,
-        title: mv.title,
-        artist: mv.artist,
-        album: mv.album,
-        artwork: mv.artwork,
-        previewUrl: mv.previewUrl,
-        artistType: meta.type,
-        genre: mv.genre,
-        country: mv.country,
-        year: mv.year,
-        displayText: `${mv.title} - ${mv.artist}`
-      });
-    }
-  }
+  // 1. Process custom tracks (e.g. from seedData)
+  for (const t of tracks) registerTrack(t);
+
+  // 2. Process comprehensive catalog
+  for (const t of COMPREHENSIVE_CATALOG) registerTrack(t);
+
+  // 3. Process curated MVs as guessable items
+  for (const mv of CURATED_MUSIC_VIDEOS) registerTrack(mv);
 
   enrichedCatalog = Array.from(map.values());
   return enrichedCatalog;
@@ -339,11 +337,37 @@ function evaluateSongdleGuess(token, guessId) {
     return { error: 'SESSION_EXPIRED', message: 'รอบการเล่นหมดอายุ กรุณาเริ่มเกมใหม่' };
   }
 
-  const guessTrack = enrichedCatalog.find(t => t.id === guessId) ||
-    enrichedCatalog.find(t => t.displayText.toLowerCase() === (guessId || '').toLowerCase().trim());
+  const rawClean = (guessId || '').trim().toLowerCase();
+  let guessTrack = enrichedCatalog.find(t => t.id === guessId) ||
+    enrichedCatalog.find(t => (t.displayText || '').toLowerCase() === rawClean) ||
+    enrichedCatalog.find(t => (t.title || '').toLowerCase() === rawClean);
 
   if (!guessTrack) {
-    return { error: 'TRACK_NOT_FOUND', message: 'ไม่พบเพลงที่ทายในฐานข้อมูล' };
+    guessTrack = enrichedCatalog.find(t =>
+      (t.displayText || '').toLowerCase().includes(rawClean) ||
+      (t.title || '').toLowerCase().includes(rawClean) ||
+      (t.artist || '').toLowerCase().includes(rawClean)
+    );
+  }
+
+  // Graceful fallback track: NEVER block user from guessing even if not pre-indexed!
+  if (!guessTrack) {
+    const parts = (guessId || '').split(/[-–—]/);
+    const title = (parts[0] || guessId || 'เพลงปริศนา').trim();
+    const artist = (parts[1] || 'ศิลปิน').trim();
+    guessTrack = {
+      id: `custom_${Date.now()}`,
+      title,
+      artist,
+      album: 'เพลงที่ค้นหา',
+      artwork: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+      previewUrl: '',
+      artistType: 'ศิลปินเดี่ยว',
+      genre: 'Pop',
+      country: 'สากล',
+      year: 2020,
+      displayText: `${title} - ${artist}`
+    };
   }
 
   const comparison = compareSongdleGuess(session.target, guessTrack);
@@ -359,6 +383,24 @@ function evaluateSongdleGuess(token, guessId) {
   }
 
   return comparison;
+}
+
+function surrenderSongdle(token) {
+  const session = songdleSessions.get(token);
+  if (!session) {
+    return { error: 'SESSION_EXPIRED', message: 'รอบการเล่นหมดอายุ กรุณาเริ่มเกมใหม่' };
+  }
+  return {
+    isSurrendered: true,
+    fullTrack: {
+      title: session.target.title,
+      artist: session.target.artist,
+      album: session.target.album,
+      artwork: session.target.artwork,
+      previewUrl: session.target.previewUrl,
+      year: session.target.year
+    }
+  };
 }
 
 // Random Heardle track provider
@@ -473,6 +515,7 @@ module.exports = {
   compareSongdleGuess,
   createSongdleSession,
   evaluateSongdleGuess,
+  surrenderSongdle,
   getRandomHeardleTrack,
   getRandomMusicVideo,
   checkMusicVideoGuess,

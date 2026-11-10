@@ -5,12 +5,13 @@ const os = require('os');
 const { Server } = require('socket.io');
 const QRCode = require('qrcode');
 const { MAIN_CATEGORIES, ALL_SUBCATEGORIES, generateQuizQuestions } = require('./musicService');
-const { unifiedMusicSearch } = require('./searchService');
+const { unifiedMusicSearch, searchAutocomplete } = require('./searchService');
 const {
   buildSongdleCatalog,
   compareSongdleGuess,
   createSongdleSession,
   evaluateSongdleGuess,
+  surrenderSongdle,
   getRandomHeardleTrack,
   getRandomMusicVideo,
   checkMusicVideoGuess,
@@ -248,10 +249,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// Enable reverse proxy support (e.g. Render, Cloudflare)
+app.set('trust proxy', 1);
+
 // 3. In-Memory Anti-DDoS & Rate Limiter Middleware
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 120;
+const MAX_REQUESTS_PER_WINDOW = 300; // Increased to 300 to allow smooth live autocomplete typing
 
 app.use('/api', (req, res, next) => {
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
@@ -383,6 +387,34 @@ app.get('/api/search', async (req, res) => {
       error: 'เกิดข้อผิดพลาดในการค้นหาเพลง',
       message: err.message
     });
+  }
+});
+
+// Fast Autocomplete Live Search API (Local First + iTunes fallback)
+app.get('/api/autocomplete', async (req, res) => {
+  const query = (req.query.q || req.query.term || req.query.query || '').trim();
+  if (!query || query.length < 1) {
+    return res.json({ results: [] });
+  }
+
+  try {
+    const results = await searchAutocomplete(query, 12);
+    res.json({ results });
+  } catch (err) {
+    console.warn('[API /api/autocomplete Error]:', err.message);
+    res.json({ results: [] });
+  }
+});
+
+// 2. Songdle API: Surrender and reveal secret track
+app.post('/api/games/songdle/surrender', (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Missing token' });
+  try {
+    const result = surrenderSongdle(token);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -947,11 +979,21 @@ io.on('connection', (socket) => {
     }
 
     if (!resolved || !resolved.title || !resolved.artist) {
-      socket.emit('songdle_toast', {
-        type: 'error',
-        message: '⚠️ ข้อมูลเพลงไม่ถูกต้องหรือไม่พบในระบบ (ไม่เสียตาและไม่เปิดคำใบ้)'
-      });
-      return;
+      const rawText = (guessText || (guessTrack && guessTrack.displayText) || 'เพลงที่ทาย').trim();
+      const parts = rawText.split(/[-–—]/);
+      const title = (parts[0] || rawText).trim();
+      const artist = (parts[1] || 'ศิลปิน').trim();
+      resolved = {
+        id: `user_${Date.now()}`,
+        title,
+        artist,
+        artwork: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600',
+        artistType: getArtistMetadata(artist).type,
+        genre: getArtistMetadata(artist).genre,
+        country: getArtistMetadata(artist).country,
+        year: 2021,
+        displayText: `${title} - ${artist}`
+      };
     }
 
     // Ensure metadata fields are present
@@ -992,11 +1034,28 @@ io.on('connection', (socket) => {
         name: player.name,
         avatar: player.avatar
       };
+
+      // Award points & streak to the winner
+      const hintCount = room.songdleState.unlockedHintCount || 0;
+      const pts = Math.max(350, 1200 - (hintCount * 150));
+      player.score = (player.score || 0) + pts;
+      player.pointsEarned = pts;
+      player.answered = true;
+      player.streak = (player.streak || 0) + 1;
+
       io.to(room.code).emit('songdle_update', sanitizeSongdleState(room.songdleState, room, true));
       io.to(room.code).emit('songdle_toast', {
         type: 'success',
-        message: `🎉 ${player.name} ทายเพลงถูกต้องสมบูรณ์แบบ!`
+        message: `🎉 ${player.name} ทายเพลงถูกต้องสมบูรณ์แบบ! (+${pts} แต้ม)`
       });
+
+      // Auto-advance to Next Round / Leaderboard after 6 seconds (or Host clicks next)
+      if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
+      room.autoAdvanceTimeout = setTimeout(() => {
+        if (room.state === 'quiz') {
+          endRound(room);
+        }
+      }, 6000);
     } else {
       // Wrong guess: Unlock next hint
       room.songdleState.unlockedHintCount++;
@@ -1009,6 +1068,14 @@ io.on('connection', (socket) => {
           type: 'info',
           message: '😢 คำใบ้หมดแล้ว! เฉลยเพลงปริศนาประจำรอบ'
         });
+
+        // Auto-advance to Next Round / Leaderboard after 6 seconds
+        if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
+        room.autoAdvanceTimeout = setTimeout(() => {
+          if (room.state === 'quiz') {
+            endRound(room);
+          }
+        }, 6000);
       } else {
         // In multiplayer: Pass turn to next player in sequence
         if (turnOrder.length > 1) {
@@ -1266,11 +1333,28 @@ io.on('connection', (socket) => {
         avatar: player.avatar
       };
       room.mvState.unlockedLevel = room.mvState.maxLevel; // Unlock full video clip!
+
+      // Award points & streak to the winner
+      const lvl = room.mvState.unlockedLevel || 0;
+      const pts = Math.max(350, 1200 - (lvl * 150));
+      player.score = (player.score || 0) + pts;
+      player.pointsEarned = pts;
+      player.answered = true;
+      player.streak = (player.streak || 0) + 1;
+
       io.to(room.code).emit('mv_update', sanitizeMvState(room.mvState, room, true));
       io.to(room.code).emit('mv_toast', {
         type: 'success',
-        message: `🎉 ${player.name} ทายเพลงจาก MV ถูกต้องสมบูรณ์แบบ!`
+        message: `🎉 ${player.name} ทายเพลงจาก MV ถูกต้องสมบูรณ์แบบ! (+${pts} แต้ม)`
       });
+
+      // Auto-advance to Next Round / Leaderboard after 7 seconds (or Host clicks next)
+      if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
+      room.autoAdvanceTimeout = setTimeout(() => {
+        if (room.state === 'quiz') {
+          endRound(room);
+        }
+      }, 7000);
     } else {
       // Wrong guess: Unlock next time snippet
       room.mvState.unlockedLevel++;
@@ -1281,6 +1365,14 @@ io.on('connection', (socket) => {
           type: 'info',
           message: '😢 ครบ 6 ช่องแล้วยังไม่มีใครทายถูก! เฉลยเพลงจาก MV ประจำรอบ'
         });
+
+        // Auto-advance to Next Round / Leaderboard after 7 seconds
+        if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
+        room.autoAdvanceTimeout = setTimeout(() => {
+          if (room.state === 'quiz') {
+            endRound(room);
+          }
+        }, 7000);
       } else {
         const nextSec = MV_SNIPPET_DURATIONS[Math.min(room.mvState.unlockedLevel, room.mvState.maxLevel)];
         if (turnOrder.length > 1) {

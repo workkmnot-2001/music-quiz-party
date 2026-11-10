@@ -1621,14 +1621,15 @@ body {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #181b38;
-  border: 1.5px solid var(--border-focus);
+  background: #0d1120;
+  border: 1.5px solid var(--accent-gold, #d4af37);
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-  max-height: 220px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.2);
+  max-height: 260px;
   overflow-y: auto;
-  z-index: 100;
+  z-index: 99999 !important;
   display: none;
+  backdrop-filter: blur(16px);
 }
 
 .autocomplete-dropdown.show {
@@ -1636,25 +1637,118 @@ body {
 }
 
 .autocomplete-item {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.9rem;
   font-size: 0.9rem;
   color: #e2e8f0;
   cursor: pointer;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  transition: background 0.15s;
+  gap: 0.75rem;
+  transition: all 0.15s ease-in-out;
 }
 
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-  background: rgba(168, 85, 247, 0.25);
+  background: rgba(212, 175, 55, 0.18);
   color: #fff;
+  border-left: 3px solid var(--accent-gold, #d4af37);
 }
 
 .autocomplete-item strong {
-  color: var(--accent-pink);
+  color: #fff;
+}
+
+.ac-art-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #1c2136;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ac-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ac-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.ac-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-artist {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-year {
+  color: var(--accent-gold, #d4af37);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.autocomplete-empty-hint {
+  padding: 0.85rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+/* Audio preview button on Search Cards */
+.btn-preview-audio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-preview-audio:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.btn-preview-audio.playing {
+  background: linear-gradient(135deg, #ef4444, #f43f5e);
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.6);
+  animation: audioPulse 1.2s infinite alternate;
+}
+
+@keyframes audioPulse {
+  from { opacity: 0.85; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1.02); }
 }
 
 /* Fast-forward / Skip Control Bar */

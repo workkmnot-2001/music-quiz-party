@@ -548,18 +548,67 @@
       });
     }
 
-    // Delegated click for .btn-songdle-restart inside result card and .songdle-hint-audio-btn
+    // Audio player for search preview
+    const searchPreviewAudio = new Audio();
+    let currentPreviewBtn = null;
+
+    // Delegated click for .btn-songdle-restart, .btn-advance-round, .btn-preview-audio, etc.
     document.addEventListener('click', (e) => {
+      // 1. Advance to Next Round immediately (Host click)
+      const advBtn = e.target.closest('.btn-advance-round');
+      if (advBtn) {
+        window.soundFX?.playClick();
+        socket.emit('host_skip_timer');
+        return;
+      }
+
+      // 2. Restart song in current round
       const restartBtn = e.target.closest('.btn-songdle-restart');
       if (restartBtn) {
         if (!canPerformAction('songdle_new_song', 3000)) return;
         window.soundFX?.playClick();
         socket.emit('songdle_new_song');
+        return;
       }
+
+      // 3. Audio hint
       const audioBtn = e.target.closest('.songdle-hint-audio-btn');
       if (audioBtn) {
         const audioUrl = audioBtn.getAttribute('data-audio');
         if (audioUrl) playSongdleHintAudio(audioUrl, audioBtn);
+        return;
+      }
+
+      // 4. Audio preview in Search Tab
+      const previewBtn = e.target.closest('.btn-preview-audio');
+      if (previewBtn) {
+        const url = previewBtn.dataset.url;
+        if (!url) return;
+
+        if (currentPreviewBtn === previewBtn && !searchPreviewAudio.paused) {
+          searchPreviewAudio.pause();
+          previewBtn.innerHTML = '▶️ ฟังตัวอย่าง (30 วิ)';
+          previewBtn.classList.remove('playing');
+          currentPreviewBtn = null;
+        } else {
+          if (currentPreviewBtn) {
+            currentPreviewBtn.innerHTML = '▶️ ฟังตัวอย่าง (30 วิ)';
+            currentPreviewBtn.classList.remove('playing');
+          }
+          searchPreviewAudio.src = url;
+          searchPreviewAudio.volume = currentVolume;
+          searchPreviewAudio.play().then(() => {
+            previewBtn.innerHTML = '⏸️ กำลังเล่น...';
+            previewBtn.classList.add('playing');
+            currentPreviewBtn = previewBtn;
+          }).catch(err => console.warn('Preview blocked:', err));
+
+          searchPreviewAudio.onended = () => {
+            previewBtn.innerHTML = '▶️ ฟังตัวอย่าง (30 วิ)';
+            previewBtn.classList.remove('playing');
+            currentPreviewBtn = null;
+          };
+        }
       }
     });
 
@@ -701,11 +750,14 @@
       }
     });
 
-    typingAnswerInput.addEventListener('input', handleTypingAutocomplete);
-    document.addEventListener('click', (e) => {
-      if (!typingModeContainer.contains(e.target)) {
-        typingAutocompleteDropdown.classList.remove('show');
+    bindAutocomplete(typingAnswerInput, typingAutocompleteDropdown, () => candidateSongsList, (item) => {
+      const targetType = (currentRound && currentRound.target) || 'song';
+      if (targetType === 'artist') {
+        typingAnswerInput.value = item.artist;
+      } else {
+        typingAnswerInput.value = item.title;
       }
+      typingAnswerInput.focus();
     });
 
     // Hint Unlock Button
@@ -951,21 +1003,33 @@
       const turntableCard = document.getElementById('quiz-turntable-card') || document.querySelector('.turntable-card');
 
       if (roundData.mode === 'songdle') {
-        // Strip question counter, streak, top progress bar, prompt and bottom bar as requested
-        if (quizTopInfo) quizTopInfo.style.display = 'none';
+        if (quizTopInfo) quizTopInfo.style.display = 'flex';
         if (timerBarContainer) timerBarContainer.style.display = 'none';
         if (questionPromptBox) questionPromptBox.style.display = 'none';
         if (turntableCard) turntableCard.style.display = 'none';
-        if (roundControlBar) roundControlBar.style.display = 'none';
+        if (roundControlBar) {
+          roundControlBar.style.display = myPlayer.isHost ? 'flex' : 'none';
+          btnSkipQuestion.style.display = 'none';
+          if (btnHostSkipTimer) {
+            btnHostSkipTimer.style.display = 'inline-flex';
+            btnHostSkipTimer.textContent = '⏩ ข้ามข้อนี้';
+          }
+        }
         if (songdleQuizContainer) songdleQuizContainer.style.display = 'block';
         initSongdleQuizRound(roundData);
       } else if (roundData.mode === 'mv') {
-        // Strip question counter, streak, top progress bar, prompt and bottom bar as requested
-        if (quizTopInfo) quizTopInfo.style.display = 'none';
+        if (quizTopInfo) quizTopInfo.style.display = 'flex';
         if (timerBarContainer) timerBarContainer.style.display = 'none';
         if (questionPromptBox) questionPromptBox.style.display = 'none';
         if (turntableCard) turntableCard.style.display = 'none';
-        if (roundControlBar) roundControlBar.style.display = 'none';
+        if (roundControlBar) {
+          roundControlBar.style.display = myPlayer.isHost ? 'flex' : 'none';
+          btnSkipQuestion.style.display = 'none';
+          if (btnHostSkipTimer) {
+            btnHostSkipTimer.style.display = 'inline-flex';
+            btnHostSkipTimer.textContent = '⏩ ข้ามข้อนี้';
+          }
+        }
         if (mvQuizContainer) mvQuizContainer.style.display = 'block';
         initMvQuizRound(roundData);
       } else {
@@ -1704,8 +1768,15 @@
         badgesHtml += `<span class="badge-source badge-mb">🎼 MusicBrainz</span>`;
       }
 
-      // External Links
+      // External Links & Audio Preview
       let actionsHtml = '';
+      if (item.previewUrl) {
+        actionsHtml += `
+          <button type="button" class="btn-preview-audio" data-url="${escapeHTML(item.previewUrl)}">
+            ▶️ ฟังตัวอย่าง (30 วิ)
+          </button>
+        `;
+      }
       if (item.appleMusicUrl) {
         actionsHtml += `
           <a href="${item.appleMusicUrl}" target="_blank" rel="noopener noreferrer" class="btn-external-link btn-apple" title="เปิดฟังเพลงบน Apple Music">
@@ -2283,9 +2354,9 @@
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
               <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
-            <div style="font-size:1.25rem; font-weight:900; color:#fff;">${state.fullTrack.title}</div>
+            <div style="font-size:1.25rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
-              โดย ${state.fullTrack.artist} (${state.fullTrack.year}) • ${state.fullTrack.genre} • ${state.fullTrack.country}
+              โดย ${escapeHTML(state.fullTrack.artist)} (${state.fullTrack.year || ''}) • ${escapeHTML(state.fullTrack.genre || '')} • ${escapeHTML(state.fullTrack.country || '')}
             </div>
             ${state.fullTrack.previewUrl ? `
               <div style="margin: 0.85rem 0;">
@@ -2293,9 +2364,19 @@
               </div>
             ` : ''}
           ` : ''}
-          <button type="button" class="btn-primary btn-songdle-restart" style="margin-top:0.6rem; padding:0.75rem 2rem;">
-            🔄 สุ่มเพลงปริศนาใหม่ ➡️
-          </button>
+          <div style="margin-top:0.85rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+            <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 6 วินาที...</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+              ${myPlayer.isHost ? `
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                  ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+              ` : ''}
+              <button type="button" class="btn-secondary btn-songdle-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
+                🔄 สุ่มเพลงใหม่ในข้อนี้
+              </button>
+            </div>
+          </div>
         `;
         window.soundFX?.playCorrect();
         launchConfetti();
@@ -2315,9 +2396,9 @@
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
               <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
-            <div style="font-size:1.25rem; font-weight:900; color:#fff;">${state.fullTrack.title}</div>
+            <div style="font-size:1.25rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
-              โดย ${state.fullTrack.artist} (${state.fullTrack.year}) • ${state.fullTrack.genre} • ${state.fullTrack.country}
+              โดย ${escapeHTML(state.fullTrack.artist)} (${state.fullTrack.year || ''}) • ${escapeHTML(state.fullTrack.genre || '')} • ${escapeHTML(state.fullTrack.country || '')}
             </div>
             ${state.fullTrack.previewUrl ? `
               <div style="margin: 0.85rem 0;">
@@ -2325,9 +2406,19 @@
               </div>
             ` : ''}
           ` : ''}
-          <button type="button" class="btn-primary btn-songdle-restart" style="margin-top:0.6rem; padding:0.75rem 2rem;">
-            🔄 สุ่มเพลงปริศนาใหม่ ➡️
-          </button>
+          <div style="margin-top:0.85rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+            <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 6 วินาที...</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+              ${myPlayer.isHost ? `
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                  ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+              ` : ''}
+              <button type="button" class="btn-secondary btn-songdle-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
+                🔄 สุ่มเพลงใหม่ในข้อนี้
+              </button>
+            </div>
+          </div>
         `;
       } else {
         resultCard.style.display = 'none';
@@ -2374,11 +2465,14 @@
     }
 
     if (!guessTrack) {
-      showToast('⚠️ ไม่พบเพลงนี้ในรายการแนะนำ กรุณาเลือกจากระบบ (ไม่เสียตา)');
-      return;
+      guessTrack = {
+        title: text,
+        artist: 'ศิลปิน',
+        displayText: text
+      };
     }
 
-    socket.emit('submit_songdle_guess', { guessTrack });
+    socket.emit('submit_songdle_guess', { guessTrack, guessText: text });
     if (input) input.value = '';
     selectedSongdleGuess = null;
   }
@@ -2712,14 +2806,24 @@
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
               <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
-            <div style="font-size:1.3rem; font-weight:900; color:#fff;">${state.fullTrack.title}</div>
+            <div style="font-size:1.3rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
-              โดย ${state.fullTrack.artist} (${state.fullTrack.year || ''}) • ${state.fullTrack.genre || ''} • ${state.fullTrack.country || ''}
+              โดย ${escapeHTML(state.fullTrack.artist)} (${state.fullTrack.year || ''}) • ${escapeHTML(state.fullTrack.genre || '')} • ${escapeHTML(state.fullTrack.country || '')}
             </div>
           ` : ''}
-          <button type="button" class="btn-primary btn-mv-restart" style="margin-top:0.6rem; padding:0.75rem 2rem;">
-            🔄 สุ่ม MV ปริศนาใหม่ ➡️
-          </button>
+          <div style="margin-top:0.85rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+            <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 7 วินาที...</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+              ${myPlayer.isHost ? `
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                  ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+              ` : ''}
+              <button type="button" class="btn-secondary btn-mv-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
+                🔄 สุ่ม MV ใหม่ในข้อนี้
+              </button>
+            </div>
+          </div>
         `;
 
         // Autoplay video in full
@@ -2746,14 +2850,24 @@
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
               <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
-            <div style="font-size:1.3rem; font-weight:900; color:#fff;">${state.fullTrack.title}</div>
+            <div style="font-size:1.3rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
-              โดย ${state.fullTrack.artist} (${state.fullTrack.year || ''}) • ${state.fullTrack.genre || ''} • ${state.fullTrack.country || ''}
+              โดย ${escapeHTML(state.fullTrack.artist)} (${state.fullTrack.year || ''}) • ${escapeHTML(state.fullTrack.genre || '')} • ${escapeHTML(state.fullTrack.country || '')}
             </div>
           ` : ''}
-          <button type="button" class="btn-primary btn-mv-restart" style="margin-top:0.6rem; padding:0.75rem 2rem;">
-            🔄 สุ่ม MV ปริศนาใหม่ ➡️
-          </button>
+          <div style="margin-top:0.85rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+            <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 7 วินาที...</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+              ${myPlayer.isHost ? `
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                  ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+              ` : ''}
+              <button type="button" class="btn-secondary btn-mv-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
+                🔄 สุ่ม MV ใหม่ในข้อนี้
+              </button>
+            </div>
+          </div>
         `;
 
         if (video) {
@@ -2818,54 +2932,157 @@
   }
 
   // ========================================================
-  // REUSABLE AUTOCOMPLETE BINDER
+  // REUSABLE LIVE AUTOCOMPLETE BINDER (LOCAL + LIVE ITUNES API)
   // ========================================================
   function bindAutocomplete(input, dropdown, getItemsFn, onSelectFn) {
     if (!input || !dropdown) return;
 
+    let debounceTimer = null;
+    let currentHighlightedIndex = -1;
+    let currentItems = [];
+
+    function renderItems(items, query) {
+      currentItems = items;
+      currentHighlightedIndex = -1;
+
+      if (!items || items.length === 0) {
+        dropdown.innerHTML = `<div class="autocomplete-empty-hint">🔍 กำลังค้นหาเพลงเพิ่มเติม...</div>`;
+        dropdown.classList.add('show');
+        return;
+      }
+
+      dropdown.innerHTML = '';
+      items.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'autocomplete-item';
+        row.dataset.index = idx;
+
+        const artSrc = item.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100';
+        row.innerHTML = `
+          <div class="ac-art-box">
+            <img src="${artSrc}" class="ac-art" loading="lazy" onerror="this.parentElement.innerHTML='🎵';">
+          </div>
+          <div class="ac-info">
+            <div class="ac-title">🎵 <strong>${escapeHTML(item.title)}</strong></div>
+            <div class="ac-artist">👤 ${escapeHTML(item.artist)} ${item.year ? `<span class="ac-year">• 📅 ${item.year}</span>` : ''}</div>
+          </div>
+        `;
+
+        row.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectItem(item);
+        });
+
+        dropdown.appendChild(row);
+      });
+      dropdown.classList.add('show');
+    }
+
+    function selectItem(item) {
+      input.value = item.displayText || `${item.title} - ${item.artist}`;
+      dropdown.innerHTML = '';
+      dropdown.classList.remove('show');
+      if (typeof onSelectFn === 'function') {
+        onSelectFn(item);
+      }
+    }
+
     input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
+      const q = input.value.trim();
       if (!q || q.length < 1) {
         dropdown.innerHTML = '';
         dropdown.classList.remove('show');
         return;
       }
 
-      const items = getItemsFn();
-      const matches = items.filter(item => {
-        const text = (item.displayText || `${item.title} ${item.artist}`).toLowerCase();
-        return text.includes(q);
-      }).slice(0, 15);
+      const qLower = q.toLowerCase();
 
-      if (matches.length === 0) {
-        dropdown.innerHTML = '';
-        dropdown.classList.remove('show');
-        return;
+      // 1. Instant local filtering (0ms latency)
+      const localList = (typeof getItemsFn === 'function' ? getItemsFn() : []) || [];
+      const localMatches = localList.filter(item => {
+        const t = (item.title || '').toLowerCase();
+        const a = (item.artist || '').toLowerCase();
+        const d = (item.displayText || '').toLowerCase();
+        return t.includes(qLower) || a.includes(qLower) || d.includes(qLower);
+      }).slice(0, 10);
+
+      if (localMatches.length > 0) {
+        renderItems(localMatches, q);
+      } else {
+        dropdown.innerHTML = `<div class="autocomplete-empty-hint">⏳ กำลังค้นหาในคลังเพลงสด...</div>`;
+        dropdown.classList.add('show');
       }
 
-      dropdown.innerHTML = '';
-      matches.forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'autocomplete-item';
-        row.innerHTML = `<span>🎵 <strong>${item.title}</strong></span> <span style="color:var(--text-secondary); font-size:0.8rem;">— 👤 ${item.artist}</span>`;
-        row.addEventListener('click', () => {
-          input.value = item.displayText || `${item.title} - ${item.artist}`;
-          dropdown.classList.remove('show');
-          onSelectFn(item);
-        });
-        dropdown.appendChild(row);
-      });
-      dropdown.classList.add('show');
+      // 2. Debounced live server search (fetches real songs from iTunes & full catalog)
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(q)}`);
+          if (res.ok) {
+            const data = await res.json();
+            const serverResults = data.results || [];
+            if (input.value.trim() === q) {
+              // Merge local + server without duplicates
+              const merged = [...localMatches];
+              const seen = new Set(merged.map(m => `${(m.title||'').toLowerCase()}_${(m.artist||'').toLowerCase()}`));
+              for (const s of serverResults) {
+                const k = `${(s.title||'').toLowerCase()}_${(s.artist||'').toLowerCase()}`;
+                if (!seen.has(k)) {
+                  seen.add(k);
+                  merged.push(s);
+                }
+              }
+
+              if (merged.length > 0) {
+                renderItems(merged.slice(0, 15), q);
+              } else {
+                dropdown.innerHTML = `<div class="autocomplete-empty-hint">🔍 พิมพ์ชื่อเพลงหรือศิลปินเพิ่มเติม...</div>`;
+                dropdown.classList.add('show');
+              }
+            }
+          }
+        } catch (e) {
+          // Keep showing local matches on error
+        }
+      }, 180);
     });
+
+    // Keyboard Navigation (Arrow keys, Enter, Escape)
+    input.addEventListener('keydown', (e) => {
+      const rows = dropdown.querySelectorAll('.autocomplete-item');
+      if (!dropdown.classList.contains('show') || rows.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        currentHighlightedIndex = (currentHighlightedIndex + 1) % rows.length;
+        updateHighlight(rows);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        currentHighlightedIndex = (currentHighlightedIndex - 1 + rows.length) % rows.length;
+        updateHighlight(rows);
+      } else if (e.key === 'Enter') {
+        if (currentHighlightedIndex >= 0 && currentHighlightedIndex < currentItems.length) {
+          e.preventDefault();
+          selectItem(currentItems[currentHighlightedIndex]);
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    function updateHighlight(rows) {
+      rows.forEach((r, idx) => {
+        if (idx === currentHighlightedIndex) {
+          r.classList.add('highlighted');
+          r.scrollIntoView({ block: 'nearest' });
+        } else {
+          r.classList.remove('highlighted');
+        }
+      });
+    }
 
     document.addEventListener('click', (e) => {
       if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove('show');
-      }
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
         dropdown.classList.remove('show');
       }
     });

@@ -4,6 +4,14 @@
 
 const https = require('https');
 
+// Local databases for immediate offline & fast autocomplete
+let COMPREHENSIVE_CATALOG = [];
+try { COMPREHENSIVE_CATALOG = require('./comprehensiveCatalog.json'); } catch (e) { COMPREHENSIVE_CATALOG = []; }
+let CURATED_MVS = [];
+try { CURATED_MVS = require('./curatedMVs.json'); } catch (e) { CURATED_MVS = []; }
+let SEED_DATA = {};
+try { SEED_DATA = require('./seedData.json'); } catch (e) { SEED_DATA = {}; }
+
 // Configuration
 const MUSICBRAINZ_USER_AGENT = 'MyMusicApp/1.0 (work.kmnot@gmail.com)';
 const MUSICBRAINZ_MIN_INTERVAL_MS = 1050; // MusicBrainz 1 req/sec rate limit compliance
@@ -27,7 +35,7 @@ function normalizeText(text) {
 }
 
 // Fetch helper with timeout and custom headers
-function fetchJson(url, headers = {}, timeoutMs = 7000) {
+function fetchJson(url, headers = {}, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
     const options = {
@@ -68,7 +76,7 @@ function fetchJson(url, headers = {}, timeoutMs = 7000) {
   });
 }
 
-// MusicBrainz Rate-Limited Request Executor
+// MusicBrainz Rate-Limited Request Executor (Max 2s timeout so it doesn't block users)
 async function executeMusicBrainzRequest(url) {
   const now = Date.now();
   const timeSinceLast = now - lastMusicBrainzRequestTime;
@@ -80,14 +88,13 @@ async function executeMusicBrainzRequest(url) {
 
   return fetchJson(url, {
     'User-Agent': MUSICBRAINZ_USER_AGENT
-  }, 7000);
+  }, 2500);
 }
 
 // Search MusicBrainz (Recordings, Artists & Releases)
 async function searchMusicBrainz(query, limit = 15) {
   if (!query || !query.trim()) return [];
 
-  // Lucene query: search both artist and recording title
   const cleanQ = query.trim();
   const luceneQuery = `artist:"${cleanQ}" OR recording:"${cleanQ}" OR ${cleanQ}`;
   const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(luceneQuery)}&fmt=json&limit=${limit}`;
@@ -103,7 +110,6 @@ async function searchMusicBrainz(query, limit = 15) {
       const releaseDate = release?.date || '';
       const releaseId = release?.id;
 
-      // MusicBrainz front artwork from Cover Art Archive (if release ID exists)
       const artwork = releaseId ? `https://coverartarchive.org/release/${releaseId}/front-250` : null;
 
       return {
@@ -113,6 +119,7 @@ async function searchMusicBrainz(query, limit = 15) {
         album: releaseTitle,
         releaseDate,
         artwork,
+        previewUrl: null,
         externalUrl: `https://musicbrainz.org/recording/${r.id}`,
         musicBrainzUrl: `https://musicbrainz.org/recording/${r.id}`,
         source: 'musicbrainz',
@@ -122,12 +129,12 @@ async function searchMusicBrainz(query, limit = 15) {
       };
     });
   } catch (err) {
-    console.warn(`[SearchService] MusicBrainz search failed for "${query}":`, err.message);
-    throw err;
+    console.warn(`[SearchService] MusicBrainz search skipped (${err.message})`);
+    return [];
   }
 }
 
-// Search iTunes Search API
+// Search iTunes Search API with automatic fallback to US if TH returns empty
 async function searchITunes(query, country = 'TH', limit = 20) {
   if (!query || !query.trim()) return [];
 
@@ -135,11 +142,27 @@ async function searchITunes(query, country = 'TH', limit = 20) {
   const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query.trim())}&media=music&entity=song&country=${cleanCountry}&limit=${limit}`;
 
   try {
-    const data = await fetchJson(url, {
+    let data = await fetchJson(url, {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-    }, 6000);
+    }, 4500);
 
-    const results = data.results || [];
+    let results = data.results || [];
+
+    // Fallback: If country=TH returned 0 results, retry without country restriction (US store)
+    if (results.length === 0 && cleanCountry === 'TH') {
+      try {
+        const fallbackUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query.trim())}&media=music&entity=song&limit=${limit}`;
+        const fallbackData = await fetchJson(fallbackUrl, {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        }, 4000);
+        if (fallbackData.results && fallbackData.results.length > 0) {
+          results = fallbackData.results;
+        }
+      } catch (fallbackErr) {
+        // Ignore fallback error
+      }
+    }
+
     return results.map(t => {
       const artwork = t.artworkUrl100
         ? t.artworkUrl100.replace('100x100bb', '600x600bb')
@@ -155,6 +178,7 @@ async function searchITunes(query, country = 'TH', limit = 20) {
         releaseDate: releaseYear,
         genre: t.primaryGenreName || '',
         artwork,
+        previewUrl: t.previewUrl || null,
         externalUrl: t.trackViewUrl || t.collectionViewUrl || '',
         appleMusicUrl: t.trackViewUrl || t.collectionViewUrl || '',
         source: 'itunes',
@@ -165,7 +189,7 @@ async function searchITunes(query, country = 'TH', limit = 20) {
     });
   } catch (err) {
     console.warn(`[SearchService] iTunes search failed for "${query}":`, err.message);
-    throw err;
+    return [];
   }
 }
 
@@ -178,7 +202,7 @@ async function searchDeezer(query, limit = 20) {
   try {
     const data = await fetchJson(url, {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-    }, 6000);
+    }, 4500);
 
     const results = data.data || [];
     return results.map(t => {
@@ -191,6 +215,7 @@ async function searchDeezer(query, limit = 20) {
         releaseDate: '',
         genre: '',
         artwork,
+        previewUrl: t.preview || null,
         externalUrl: t.link || '',
         deezerUrl: t.link || '',
         source: 'deezer',
@@ -201,11 +226,11 @@ async function searchDeezer(query, limit = 20) {
     });
   } catch (err) {
     console.warn(`[SearchService] Deezer search failed for "${query}":`, err.message);
-    throw err;
+    return [];
   }
 }
 
-// Unified Search: Merges and Deduplicates Results from iTunes, Deezer, and MusicBrainz
+// Unified Search: Merges and Deduplicates Results from iTunes, Deezer, MusicBrainz & Local Library
 async function unifiedMusicSearch(query, country = 'TH') {
   if (!query || !query.trim()) {
     return {
@@ -234,11 +259,43 @@ async function unifiedMusicSearch(query, country = 'TH') {
     searchCache.delete(cacheKey);
   }
 
-  // Run searches across all 3 providers concurrently with individual error handling
+  // Pre-search local database for instant Thai/Inter matches
+  const localMatches = [];
+  const qLower = cleanQ.toLowerCase();
+  const allLocal = [
+    ...COMPREHENSIVE_CATALOG,
+    ...CURATED_MVS,
+    ...Object.values(SEED_DATA).flat()
+  ];
+  for (const t of allLocal) {
+    if (!t || !t.title || !t.artist) continue;
+    if (t.title.toLowerCase().includes(qLower) || t.artist.toLowerCase().includes(qLower)) {
+      localMatches.push({
+        id: t.id || `local_${normalizeText(t.title)}_${normalizeText(t.artist)}`,
+        title: t.title,
+        artist: t.artist,
+        album: t.album || '',
+        releaseDate: t.year ? String(t.year) : '',
+        genre: t.genre || '',
+        artwork: t.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600',
+        previewUrl: t.previewUrl || null,
+        externalUrl: '',
+        appleMusicUrl: '',
+        deezerUrl: '',
+        source: 'local',
+        sourceLabel: 'คลังเพลงแนะนำ',
+        sources: ['itunes'],
+        sourceLabels: ['Apple Music']
+      });
+      if (localMatches.length >= 10) break;
+    }
+  }
+
+  // Run searches across providers concurrently
   const [itunesRes, deezerRes, mbRes] = await Promise.allSettled([
-    searchITunes(cleanQ, cleanCountry, 20),
+    searchITunes(cleanQ, cleanCountry, 25),
     searchDeezer(cleanQ, 20),
-    searchMusicBrainz(cleanQ, 15)
+    searchMusicBrainz(cleanQ, 10)
   ]);
 
   const sourcesStatus = {
@@ -264,21 +321,33 @@ async function unifiedMusicSearch(query, country = 'TH') {
   const mbList = mbRes.status === 'fulfilled' ? mbRes.value : [];
 
   // Merge and Deduplicate items across all providers
-  // Key: normalized(title) + '___' + normalized(artist)
   const mergedMap = new Map();
 
-  // 1. Process iTunes tracks
-  for (const track of itunesList) {
+  // 1. Process local matches first (highest relevance)
+  for (const track of localMatches) {
     const key = `${normalizeText(track.title)}___${normalizeText(track.artist)}`;
-    mergedMap.set(key, {
-      ...track,
-      source: 'itunes',
-      sources: ['itunes'],
-      sourceLabels: ['Apple Music']
-    });
+    mergedMap.set(key, track);
   }
 
-  // 2. Process Deezer tracks: enrich existing or add new
+  // 2. Process iTunes tracks
+  for (const track of itunesList) {
+    const key = `${normalizeText(track.title)}___${normalizeText(track.artist)}`;
+    if (mergedMap.has(key)) {
+      const existing = mergedMap.get(key);
+      if (!existing.previewUrl && track.previewUrl) existing.previewUrl = track.previewUrl;
+      if (!existing.artwork && track.artwork) existing.artwork = track.artwork;
+      if (!existing.appleMusicUrl && track.appleMusicUrl) existing.appleMusicUrl = track.appleMusicUrl;
+    } else {
+      mergedMap.set(key, {
+        ...track,
+        source: 'itunes',
+        sources: ['itunes'],
+        sourceLabels: ['Apple Music']
+      });
+    }
+  }
+
+  // 3. Process Deezer tracks
   for (const dzTrack of deezerList) {
     const key = `${normalizeText(dzTrack.title)}___${normalizeText(dzTrack.artist)}`;
     if (mergedMap.has(key)) {
@@ -289,6 +358,7 @@ async function unifiedMusicSearch(query, country = 'TH') {
         existing.sourceLabels.push('Deezer');
       }
       existing.deezerUrl = dzTrack.deezerUrl;
+      if (!existing.previewUrl && dzTrack.previewUrl) existing.previewUrl = dzTrack.previewUrl;
       if (!existing.artwork && dzTrack.artwork) existing.artwork = dzTrack.artwork;
       if (!existing.album && dzTrack.album) existing.album = dzTrack.album;
     } else {
@@ -301,7 +371,7 @@ async function unifiedMusicSearch(query, country = 'TH') {
     }
   }
 
-  // 3. Process MusicBrainz tracks: enrich existing or add new
+  // 4. Process MusicBrainz tracks
   for (const mbTrack of mbList) {
     const key = `${normalizeText(mbTrack.title)}___${normalizeText(mbTrack.artist)}`;
     if (mergedMap.has(key)) {
@@ -343,10 +413,93 @@ async function unifiedMusicSearch(query, country = 'TH') {
   return responsePayload;
 }
 
+// Fast Autocomplete Search for Dropdowns (Local First + Fast iTunes API)
+async function searchAutocomplete(query, limit = 12) {
+  if (!query || typeof query !== 'string' || query.trim().length < 1) {
+    return [];
+  }
+
+  const q = query.trim().toLowerCase();
+  const results = [];
+  const seenKeys = new Set();
+
+  function addCandidate(c, priority = 3) {
+    if (!c || !c.title || !c.artist) return;
+    const key = `${normalizeText(c.title)}___${normalizeText(c.artist)}`;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+
+    results.push({
+      id: c.id || `${c.artist}_${c.title}`.toLowerCase().replace(/[\s\-_.,'"!?:;()\[\]]/g, ''),
+      title: c.title,
+      artist: c.artist,
+      displayText: c.displayText || `${c.title} - ${c.artist}`,
+      artwork: c.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100',
+      previewUrl: c.previewUrl || null,
+      year: c.year || (c.releaseDate ? parseInt(c.releaseDate.substring(0, 4), 10) : 2021),
+      genre: c.genre || 'Pop',
+      country: c.country || 'สากล',
+      artistType: c.artistType || 'ศิลปินเดี่ยว',
+      priority
+    });
+  }
+
+  // 1. Instant check against local comprehensive library & MVs
+  const localPool = [
+    ...COMPREHENSIVE_CATALOG,
+    ...CURATED_MVS,
+    ...Object.values(SEED_DATA).flat()
+  ];
+
+  for (const t of localPool) {
+    if (!t || !t.title || !t.artist) continue;
+    const tLower = t.title.toLowerCase();
+    const aLower = t.artist.toLowerCase();
+    const dLower = `${tLower} ${aLower}`;
+
+    if (tLower === q || aLower === q) {
+      addCandidate(t, 1); // Exact match
+    } else if (tLower.startsWith(q) || aLower.startsWith(q)) {
+      addCandidate(t, 2); // Starts with
+    } else if (dLower.includes(q)) {
+      addCandidate(t, 3); // Substring
+    }
+  }
+
+  // 2. If fewer than limit and user typed >= 2 chars, fetch live from iTunes API
+  if (results.length < limit && q.length >= 2) {
+    try {
+      const itunesItems = await searchITunes(query, 'TH', 10);
+      for (const item of itunesItems) {
+        addCandidate({
+          id: item.id,
+          title: item.title,
+          artist: item.artist,
+          album: item.album,
+          artwork: item.artwork,
+          previewUrl: item.previewUrl,
+          year: item.releaseDate ? parseInt(item.releaseDate, 10) : 2022,
+          genre: item.genre,
+          displayText: `${item.title} - ${item.artist}`
+        }, 4);
+        if (results.length >= limit) break;
+      }
+    } catch (e) {
+      // Ignore network search errors for autocomplete
+    }
+  }
+
+  // Sort by priority (1: exact, 2: startsWith, 3: contains local, 4: itunes live)
+  results.sort((a, b) => a.priority - b.priority);
+  return results.slice(0, limit);
+}
+
 module.exports = {
   searchITunes,
   searchDeezer,
   searchMusicBrainz,
-  unifiedMusicSearch
+  unifiedMusicSearch,
+  searchAutocomplete
 };
+
 
