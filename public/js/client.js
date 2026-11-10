@@ -111,8 +111,10 @@
   const playerNameInput = document.getElementById('player-name-input');
   const avatarGrid = document.getElementById('avatar-grid');
   const gameModeBoxes = document.querySelectorAll('.game-mode-box');
+  const btnSelectAllModes = document.getElementById('btn-select-all-modes');
   let selectedGameMode = 'choices';
   const mainCatBoxes = document.getElementById('main-cat-boxes');
+  const btnSelectAllCats = document.getElementById('btn-select-all-cats');
   let selectedMainCategoryId = 'mix';
   const selectSubCategory = document.getElementById('select-sub-category');
   const subCategoryGroup = document.getElementById('sub-category-group');
@@ -341,15 +343,33 @@
     }
   }
 
+  function updateCategorySelectionUI() {
+    if (selectedMainCategoryId === 'mix') {
+      btnSelectAllCats?.classList.add('active');
+      document.querySelectorAll('.main-cat-box').forEach(b => b.classList.add('selected'));
+    } else {
+      btnSelectAllCats?.classList.remove('active');
+      document.querySelectorAll('.main-cat-box').forEach(b => {
+        if (b.dataset.id === selectedMainCategoryId) {
+          b.classList.add('selected');
+        } else {
+          b.classList.remove('selected');
+        }
+      });
+    }
+  }
+
   function populateCategoryBoxes() {
     if (!mainCatBoxes) return;
     mainCatBoxes.innerHTML = '';
-    const categoriesList = Object.values(mainCategoriesData);
+    // Filter out 'mix' so only specific genre boxes appear in grid; 'mix' is controlled by trailing badge icon!
+    const categoriesList = Object.values(mainCategoriesData).filter(c => c.id !== 'mix');
     if (categoriesList.length === 0) return;
 
     categoriesList.forEach((main) => {
       const box = document.createElement('div');
-      box.className = `main-cat-box ${main.id === selectedMainCategoryId ? 'selected' : ''}`;
+      const isSelected = selectedMainCategoryId === 'mix' || selectedMainCategoryId === main.id;
+      box.className = `main-cat-box ${isSelected ? 'selected' : ''}`;
       box.dataset.id = main.id;
 
       // Extract Thai name and English subtitle from main.name
@@ -373,8 +393,7 @@
 
       box.addEventListener('click', () => {
         selectedMainCategoryId = main.id;
-        document.querySelectorAll('.main-cat-box').forEach(b => b.classList.remove('selected'));
-        box.classList.add('selected');
+        updateCategorySelectionUI();
         window.soundFX?.playClick();
         updateSubCategoryDropdown();
       });
@@ -382,6 +401,7 @@
       mainCatBoxes.appendChild(box);
     });
 
+    updateCategorySelectionUI();
     updateSubCategoryDropdown();
   }
 
@@ -712,14 +732,43 @@
       showToast('🔊 ระบบเสียงพร้อมทำงาน 100%!');
     });
 
-    // Game Mode Box selection
+    // Game Mode Selection Logic (with Select All / Mixed Mode)
+    function updateGameModeSelectionUI() {
+      if (selectedGameMode === 'mixed') {
+        btnSelectAllModes?.classList.add('active');
+        gameModeBoxes.forEach(b => b.classList.add('selected'));
+      } else {
+        btnSelectAllModes?.classList.remove('active');
+        gameModeBoxes.forEach(b => {
+          if (b.dataset.mode === selectedGameMode) {
+            b.classList.add('selected');
+          } else {
+            b.classList.remove('selected');
+          }
+        });
+      }
+    }
+
+    btnSelectAllModes?.addEventListener('click', () => {
+      selectedGameMode = 'mixed';
+      updateGameModeSelectionUI();
+      window.soundFX?.playClick();
+    });
+
     gameModeBoxes.forEach(box => {
       box.addEventListener('click', () => {
-        gameModeBoxes.forEach(b => b.classList.remove('selected'));
-        box.classList.add('selected');
         selectedGameMode = box.dataset.mode || 'choices';
+        updateGameModeSelectionUI();
         window.soundFX?.playClick();
       });
+    });
+
+    // Main Category Trailing Mix Badge Listener
+    btnSelectAllCats?.addEventListener('click', () => {
+      selectedMainCategoryId = 'mix';
+      updateCategorySelectionUI();
+      window.soundFX?.playClick();
+      updateSubCategoryDropdown();
     });
 
     // Room Actions

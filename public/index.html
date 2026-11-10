@@ -151,7 +151,12 @@
             
             <!-- Game Mode Box Selector -->
             <div class="form-group">
-              <label class="form-label">🎮 รูปแบบการเล่น (Game Mode):</label>
+              <div class="form-label-row">
+                <label class="form-label">🎮 รูปแบบการเล่น (Game Mode):</label>
+                <button type="button" id="btn-select-all-modes" class="badge-mix-btn" title="โหมดผสมผสาน (สลับสุ่มเล่นทุกแบบ)">
+                  🔀 โหมดผสมผสาน
+                </button>
+              </div>
               <div class="game-mode-boxes" id="game-mode-boxes">
                 <div class="game-mode-box selected" data-mode="choices">
                   <div class="mode-box-icon">🔘</div>
@@ -166,14 +171,6 @@
                   <div class="mode-box-content">
                     <div class="mode-box-title">พิมพ์ตอบ + มีคำใบ้</div>
                     <div class="mode-box-desc">พิมพ์ชื่อเพลง/ศิลปิน มีคำใบ้ 3 ระดับ</div>
-                  </div>
-                </div>
-
-                <div class="game-mode-box" data-mode="mixed">
-                  <div class="mode-box-icon">🔀</div>
-                  <div class="mode-box-content">
-                    <div class="mode-box-title">โหมดผสมผสาน</div>
-                    <div class="mode-box-desc">สลับข้อช้อยส์กับพิมพ์ตอบ</div>
                   </div>
                 </div>
 
@@ -213,7 +210,12 @@
 
             <!-- Main Category Box Selector -->
             <div class="form-group">
-              <label class="form-label">🎶 หมวดหมู่หลัก (Main Category):</label>
+              <div class="form-label-row">
+                <label class="form-label">🎶 หมวดหมู่หลัก (Main Category):</label>
+                <button type="button" id="btn-select-all-cats" class="badge-mix-btn active" title="มิกซ์รวมทุกหมวด (สุ่มเพลงจากทุกแนว)">
+                  🔀 มิกซ์รวมทุกหมวด
+                </button>
+              </div>
               <div class="main-cat-boxes" id="main-cat-boxes">
                 <!-- Dynamically populated box buttons via JS -->
               </div>

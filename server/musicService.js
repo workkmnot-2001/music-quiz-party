@@ -1052,7 +1052,8 @@ async function generateQuizQuestions(selection = ['mix'], count = 10, gameMode =
     if (gameMode === 'typing') {
       questionType = 'typing';
     } else if (gameMode === 'mixed') {
-      questionType = i % 2 === 0 ? 'choices' : 'typing';
+      const mixedModes = ['choices', 'typing', 'heardle', 'songdle', 'mv'];
+      questionType = mixedModes[i % mixedModes.length];
     } else if (gameMode === 'year') {
       questionType = 'year';
     } else if (gameMode === 'heardle') {

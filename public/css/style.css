@@ -844,7 +844,52 @@ body {
   }
 }
 
-/* Game Mode Box Selector */
+/* Form Label Header with Trailing Mix Badge Button */
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.form-label-row .form-label {
+  margin-bottom: 0;
+}
+
+.badge-mix-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(245, 197, 66, 0.08);
+  border: 1px solid rgba(245, 197, 66, 0.35);
+  color: #f5c542;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.badge-mix-btn:hover {
+  background: rgba(245, 197, 66, 0.22);
+  border-color: #f5c542;
+  box-shadow: 0 0 14px rgba(245, 197, 66, 0.35);
+  transform: translateY(-1px);
+}
+
+.badge-mix-btn.active {
+  background: linear-gradient(135deg, #f5c542, #b8860b);
+  color: #0b0d14;
+  border-color: #ffd768;
+  font-weight: 900;
+  box-shadow: 0 0 16px rgba(245, 197, 66, 0.5);
+}
+
+/* Game Mode Box Selector - Perfectly symmetric 6-box 3x2 grid */
 .game-mode-boxes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -852,17 +897,10 @@ body {
   margin-bottom: 0.35rem;
 }
 
-.game-mode-box[data-mode="mv"] {
-  grid-column: span 3;
-}
-
 @media (max-width: 768px) {
   .game-mode-boxes {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.45rem;
-  }
-  .game-mode-box[data-mode="mv"] {
-    grid-column: span 2;
   }
 }
 
