@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🎵 Music Quiz Party! - ปาร์ตี้เกมทายเพลงสุดมันส์</title>
+  
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Ambient Glow Background -->
+  <div class="ambient-bg">
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+    <div class="glow-orb glow-orb-3"></div>
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Hidden HTML5 Audio Element for Preview Streams -->
+  <audio id="music-player" preload="auto" playsinline></audio>
+
+  <!-- Mobile Top Header (with Sidebar Toggle) -->
+  <div class="mobile-top-bar">
+    <div class="brand-badge">
+      <span class="icon-spin">🎵</span> QUIZ PARTY!
+    </div>
+    <div style="display:flex; align-items:center; gap:0.5rem;">
+      <button id="btn-toggle-sidebar" class="btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
+        👥 ห้อง (<span id="mobile-player-count">1</span>)
+      </button>
+      <button id="btn-sound-toggle-mobile" class="icon-btn">🔊</button>
+    </div>
+  </div>
+
+  <div class="party-layout">
+
+    <!-- ==============================================
+         LEFT SIDEBAR: ROOM & LOBBY & PLAYERS
+         ============================================== -->
+    <aside id="room-sidebar" class="room-sidebar">
+      <div class="sidebar-header">
+        <div class="brand-badge desktop-only">
+          <span class="icon-spin">🎵</span> MUSIC QUIZ PARTY!
+        </div>
+        <button id="btn-close-sidebar" class="icon-btn mobile-only" title="ปิดเมนู">✕</button>
+      </div>
+
+      <!-- Room Code & Quick Invite Card -->
+      <div class="sidebar-room-card" id="sidebar-room-info" style="display:none;">
+        <div class="sidebar-code-tag">รหัสห้อง (ROOM CODE)</div>
+        <div id="display-room-code" class="sidebar-room-code" title="คลิกเพื่อคัดลอกรหัส">-----</div>
+        
+        <div class="sidebar-actions-grid">
+          <button id="btn-copy-link" class="btn-sidebar-action" title="คัดลอกลิงก์ชวนเพื่อน">
+            🔗 ลิงก์เชิญ
+          </button>
+          <button id="btn-show-qr" class="btn-sidebar-action" title="เปิด QR Code สแกนเข้าห้อง">
+            📱 QR Code
+          </button>
+        </div>
+
+        <div class="sidebar-wifi-pill" id="sidebar-wifi-info">
+          📶 มือถือ: <strong id="display-network-url">http://...</strong>
+        </div>
+      </div>
+
+      <!-- Room Settings Overview -->
+      <div class="sidebar-settings-card" id="sidebar-settings-box" style="display:none;">
+        <div class="sidebar-setting-row">
+          <span>🎮 โหมด:</span>
+          <strong id="sidebar-mode-text">ช้อยส์ 4 ตัวเลือก</strong>
+        </div>
+        <div class="sidebar-setting-row">
+          <span>🎶 หมวด:</span>
+          <strong id="sidebar-cat-text">มิกซ์รวม</strong>
+        </div>
+        <div class="sidebar-setting-row">
+          <span>⏱️ จำนวน / เวลา:</span>
+          <strong id="sidebar-round-text">10 ข้อ / 20วิ</strong>
+        </div>
+      </div>
+
+      <!-- Connected Players List in Sidebar -->
+      <div class="sidebar-players-section">
+        <div class="sidebar-section-title">
+          <span>👥 สมาชิกในห้อง</span>
+          <span class="badge-count" id="sidebar-player-count">0 คน</span>
+        </div>
+        <div class="sidebar-players-list" id="sidebar-players-list">
+          <!-- Injected via JS -->
+          <div style="text-align:center; padding:1.5rem 0.5rem; color:var(--text-muted); font-size:0.85rem;">
+            ยังไม่ได้เข้าร่วมห้อง
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Audio & Bottom Controls -->
+      <div class="sidebar-footer">
+        <div class="sidebar-volume-box">
+          <button id="btn-sound-toggle" class="icon-btn" title="เปิด/ปิดเสียง">🔊</button>
+          <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.05" value="0.8">
+        </div>
+        <button id="btn-leave-room" class="btn-secondary btn-leave" style="display:none;">
+          🚪 ออกจากห้อง
+        </button>
+      </div>
+    </aside>
+
+    <!-- Backdrop for mobile drawer -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+    <!-- ==============================================
+         RIGHT MAIN GAME AREA
+         ============================================== -->
+    <main class="game-main-area">
+
+      <!-- ==============================================
+           SCREEN 1: HOME (MINIMALIST SETUP WITH DROPDOWNS)
+           ============================================== -->
+      <section id="screen-home" class="screen active">
+        <div class="glass-panel">
+          
+          <div class="hero-header">
+            <h1 class="hero-title">MUSIC QUIZ PARTY!</h1>
+            <p class="hero-subtitle">ปาร์ตี้เกมทายเพลงสด เล่นเพลงพร้อมกันทั้งห้อง ดึงเพลงฮิตจาก API</p>
+          </div>
+
+          <!-- Mode Tabs -->
+          <div class="tabs-header">
+            <button id="tab-create" class="tab-btn active">
+              👑 สร้างห้อง
+            </button>
+            <button id="tab-join" class="tab-btn">
+              🚪 เข้าห้อง
+            </button>
+            <button id="tab-search" class="tab-btn">
+              🔍 ค้นหาเพลง
+            </button>
+          </div>
+
+          <!-- TAB CONTENT 1: CREATE ROOM (MINIMALIST SETUP) -->
+          <div id="create-room-panel">
+            
+            <!-- Game Mode Box Selector -->
+            <div class="form-group">
+              <label class="form-label">🎮 รูปแบบการเล่น (Game Mode):</label>
+              <div class="game-mode-boxes" id="game-mode-boxes">
+                <div class="game-mode-box selected" data-mode="choices">
+                  <div class="mode-box-icon">🔘</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">ช้อยส์ 4 ตัวเลือก</div>
+                    <div class="mode-box-desc">ทายชื่อเพลง & ศิลปิน แข่งตอบเร็ว</div>
+                  </div>
+                </div>
+
+                <div class="game-mode-box" data-mode="typing">
+                  <div class="mode-box-icon">✍️</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">พิมพ์ตอบ + มีคำใบ้</div>
+                    <div class="mode-box-desc">พิมพ์ชื่อเพลง/ศิลปิน มีคำใบ้ 3 ระดับ</div>
+                  </div>
+                </div>
+
+                <div class="game-mode-box" data-mode="mixed">
+                  <div class="mode-box-icon">🔀</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">โหมดผสมผสาน</div>
+                    <div class="mode-box-desc">สลับข้อช้อยส์กับพิมพ์ตอบ</div>
+                  </div>
+                </div>
+
+                <div class="game-mode-box" data-mode="survival">
+                  <div class="mode-box-icon">💀</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">เซอร์ไววัล 3 ชีวิต</div>
+                    <div class="mode-box-desc">มี 3 หัวใจ ❤️ ผิดเสียเลือด รอดคนสุดท้ายชนะ</div>
+                  </div>
+                </div>
+
+                <div class="game-mode-box" data-mode="heardle">
+                  <div class="mode-box-icon">🎧</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">Heardle (5 ระดับ)</div>
+                    <div class="mode-box-desc">ฟังเสียงสั้นๆ ปลดล็อคความยาวเพิ่มเมื่อข้าม/ผิด</div>
+                  </div>
+                </div>
+
+                <div class="game-mode-box" data-mode="songdle">
+                  <div class="mode-box-icon">🟩</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">Songdle</div>
+                    <div class="mode-box-desc">สุ่มเพลงทั่วโลก ทายด้วยตารางคำใบ้สี เขียว/ส้ม/แดง</div>
+                  </div>
+                </div>
+
+                <div class="game-mode-box" data-mode="mv">
+                  <div class="mode-box-icon">🎬</div>
+                  <div class="mode-box-content">
+                    <div class="mode-box-title">ทายจาก MV</div>
+                    <div class="mode-box-desc">ดูคลิป MV สั้นๆ แป๊บเดียว เพิ่มเวลาเรื่อยๆ เมื่อตอบผิด</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Category Box Selector -->
+            <div class="form-group">
+              <label class="form-label">🎶 หมวดหมู่หลัก (Main Category):</label>
+              <div class="main-cat-boxes" id="main-cat-boxes">
+                <!-- Dynamically populated box buttons via JS -->
+              </div>
+            </div>
+
+            <!-- Sub Category Dropdown -->
+            <div class="form-group" id="sub-category-group">
+              <label class="form-label">📂 หมวดหมู่ย่อย (Sub-Category):</label>
+              <div class="select-wrapper">
+                <select id="select-sub-category" class="dropdown-select">
+                  <!-- Dynamically populated based on Main Category -->
+                </select>
+                <div class="select-arrow">▾</div>
+              </div>
+            </div>
+
+            <!-- Rounds & Timer in Row -->
+            <div class="dropdown-grid-row">
+              <div class="form-group">
+                <label class="form-label">⏱️ จำนวนข้อ (Questions):</label>
+                <div class="select-wrapper">
+                  <select id="select-question-count" class="dropdown-select">
+                    <option value="5">5 ข้อ (5 Questions)</option>
+                    <option value="10" selected>10 ข้อ (10 Questions)</option>
+                    <option value="15">15 ข้อ (15 Questions)</option>
+                    <option value="20">20 ข้อ (20 Questions)</option>
+                  </select>
+                  <div class="select-arrow">▾</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">⏳ เวลาตอบต่อข้อ (Time limit):</label>
+                <div class="select-wrapper">
+                  <select id="select-round-timer" class="dropdown-select">
+                    <option value="15">15 วินาที (15 Seconds)</option>
+                    <option value="20" selected>20 วินาที (20 Seconds)</option>
+                    <option value="30">30 วินาที (30 Seconds)</option>
+                  </select>
+                  <div class="select-arrow">▾</div>
+                </div>
+              </div>
+            </div>
+
+            <button id="btn-create-room" class="btn-primary">
+              🚀 สร้างห้อง & ชวนเพื่อนร่วมปาร์ตี้
+            </button>
+          </div>
+
+          <!-- TAB CONTENT 2: JOIN ROOM -->
+          <div id="join-room-panel" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">🔑 ใส่รหัสห้อง (Room Code):</label>
+              <input type="text" id="room-code-input" class="input-field input-code" placeholder="เช่น ABCDE" maxlength="8">
+            </div>
+
+            <button id="btn-join-room" class="btn-primary">
+              🚪 เข้าร่วมห้องทันที!
+            </button>
+          </div>
+
+          <!-- TAB CONTENT 3: SEARCH MUSIC (UNIFIED MUSICBRAINZ + ITUNES) -->
+          <div id="search-music-panel" style="display:none;">
+            <div class="search-panel-header">
+              <div class="search-intro">
+                <h3 class="search-title">🔍 ค้นหาข้อมูลเพลง ศิลปิน และอัลบั้ม</h3>
+                <p class="search-desc">
+                  ดึงข้อมูลพร้อมกันจาก <strong>Apple Music / iTunes</strong> และ <strong>MusicBrainz</strong> ในช่องค้นหาเดียว พร้อมลิงก์ไปฟังอย่างเป็นทางการ
+                </p>
+              </div>
+            </div>
+
+            <!-- Single Search Form with Country Selector -->
+            <form id="music-search-form" class="music-search-form" onsubmit="return false;">
+              <div class="search-input-group">
+                <div class="search-field-wrapper">
+                  <span class="search-icon-symbol">🔍</span>
+                  <input type="text" id="music-search-input" class="search-input-box" placeholder="พิมพ์ชื่อเพลง ศิลปิน หรืออัลบั้ม... (เช่น Bodyslam, Cruel Summer, BLACKPINK)" autocomplete="off">
+                  <button type="button" id="btn-clear-search" class="btn-clear-input" title="ล้างข้อความ" style="display:none;">✕</button>
+                </div>
+
+                <div class="search-country-wrapper">
+                  <label for="music-search-country" class="search-country-label">🌐 ประเทศ:</label>
+                  <div class="select-wrapper select-wrapper-compact">
+                    <select id="music-search-country" class="dropdown-select country-select">
+                      <option value="TH" selected>🇹🇭 ไทย (TH)</option>
+                      <option value="US">🇺🇸 สหรัฐฯ (US)</option>
+                      <option value="JP">🎌 ญี่ปุ่น (JP)</option>
+                      <option value="KR">🇰🇷 เกาหลีใต้ (KR)</option>
+                      <option value="GB">🇬🇧 อังกฤษ (GB)</option>
+                      <option value="TW">🇹🇼 ไต้หวัน (TW)</option>
+                      <option value="FR">🇫🇷 ฝรั่งเศส (FR)</option>
+                      <option value="DE">🇩🇪 เยอรมนี (DE)</option>
+                      <option value="AU">🇦🇺 ออสเตรเลีย (AU)</option>
+                    </select>
+                    <div class="select-arrow">▾</div>
+                  </div>
+                </div>
+
+                <button type="submit" id="btn-submit-search" class="btn-primary search-submit-btn">
+                  <span>ค้นหา</span> 🚀
+                </button>
+              </div>
+            </form>
+
+            <!-- Source Filter Chips -->
+            <div class="search-filter-bar" id="search-filter-bar" style="display:none;">
+              <span class="filter-label">🏷️ แหล่งที่มา:</span>
+              <div class="filter-chips">
+                <button type="button" class="filter-chip active" data-filter="all">🌟 ทั้งหมด (<span id="count-all">0</span>)</button>
+                <button type="button" class="filter-chip" data-filter="itunes">🍎 Apple Music (<span id="count-itunes">0</span>)</button>
+                <button type="button" class="filter-chip" data-filter="deezer">🎧 Deezer (<span id="count-deezer">0</span>)</button>
+                <button type="button" class="filter-chip" data-filter="musicbrainz">🎼 MusicBrainz (<span id="count-mb">0</span>)</button>
+                <button type="button" class="filter-chip" data-filter="both">✨ มีหลายแหล่ง (<span id="count-both">0</span>)</button>
+              </div>
+            </div>
+
+            <!-- Notice / Status Banner -->
+            <div id="search-status-banner" class="search-status-banner" style="display:none;"></div>
+
+            <!-- Loading State -->
+            <div id="search-loading-state" class="search-state-box" style="display:none;">
+              <div class="search-spinner"></div>
+              <div class="search-state-title">กำลังค้นหาข้อมูลเพลง...</div>
+              <div class="search-state-desc">ดึงข้อมูลสดพร้อมกันจาก Apple Music และ MusicBrainz API</div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="search-empty-state" class="search-state-box" style="display:none;">
+              <div class="search-state-icon">🔍</div>
+              <div class="search-state-title">ไม่พบข้อมูลเพลงที่ค้นหา</div>
+              <div class="search-state-desc">ลองตรวจสอบตัวสะกด หรือเปลี่ยนคำค้นหา / สลับประเทศด้านบน</div>
+            </div>
+
+            <!-- Initial Idle State (Tips & Quick Examples) -->
+            <div id="search-idle-state" class="search-state-box">
+              <div class="search-state-icon">🎵</div>
+              <div class="search-state-title">ค้นหาเพลงและข้อมูลศิลปินได้ทันที</div>
+              <div class="search-state-desc">
+                ค้นหาเพลง ศิลปิน อัลบั้ม ภาพปก และปีที่วางจำหน่าย พร้อมลิงก์ไปฟังบน Apple Music และหน้าข้อมูล MusicBrainz
+              </div>
+              <div class="search-quick-tags">
+                <span class="quick-tag-label">ตัวอย่างค้นหายอดฮิต:</span>
+                <button type="button" class="search-tag-pill" data-query="Bodyslam">🎸 Bodyslam</button>
+                <button type="button" class="search-tag-pill" data-query="Cruel Summer">💖 Cruel Summer</button>
+                <button type="button" class="search-tag-pill" data-query="BLACKPINK">✨ BLACKPINK</button>
+                <button type="button" class="search-tag-pill" data-query="YOASOBI">🎌 YOASOBI</button>
+                <button type="button" class="search-tag-pill" data-query="แสงสุดท้าย">🇹🇭 แสงสุดท้าย</button>
+              </div>
+            </div>
+
+            <!-- Results Grid -->
+            <div id="search-results-grid" class="search-results-grid" style="display:none;">
+              <!-- Cards injected dynamically via JS -->
+            </div>
+
+            <!-- Terms & Compliance Notice -->
+            <div class="search-legal-footer">
+              ℹ️ ระบบนี้ใช้สำหรับค้นหาและแสดงข้อมูลเพลงกับลิงก์ไปฟังเท่านั้น ไม่มีการเปิดเล่นเสียงตัวอย่างหรือเพลงเต็มโดยตรง เพื่อให้เป็นไปตามเงื่อนไขการให้บริการของ Apple Music และ MusicBrainz
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==============================================
+           SCREEN 2: LOBBY (WAITING ROOM)
+           ============================================== -->
+      <section id="screen-lobby" class="screen">
+        <div class="glass-panel">
+          
+          <div class="hero-header">
+            <h2 style="font-size:1.8rem; font-weight:800; color:#fff;">🎉 ห้องปาร์ตี้พร้อมแล้ว!</h2>
+            <p style="color:var(--text-secondary); font-size:0.95rem;">ชวนเพื่อนเข้าร่วมห้อง แล้วกดเริ่มเล่นได้เลย</p>
+          </div>
+
+          <!-- Audio Unlock Banner -->
+          <div class="audio-unlock-banner">
+            <div class="audio-unlock-text">
+              <strong>🔊 ปลดล็อคระบบเสียง:</strong> กดปุ่มทดสอบเสียง เพื่อให้เบราว์เซอร์เล่นเพลงอัตโนมัติบนมือถือ
+            </div>
+            <button id="btn-test-sound" class="btn-secondary" style="flex-shrink:0;">
+              🔔 ทดสอบเสียง
+            </button>
+          </div>
+
+          <!-- Quick Summary in Lobby -->
+          <div class="lobby-summary-box">
+            <div>🎮 <strong>โหมด:</strong> <span id="lobby-summary-mode">ช้อยส์ 4 ตัวเลือก</span></div>
+            <div>🏷️ <strong>หมวด:</strong> <span id="lobby-summary-cats">มิกซ์รวม</span></div>
+            <div>⏱️ <strong>การแข่ง:</strong> <span id="lobby-summary-rounds">10 ข้อ (ข้อละ 20 วิ)</span></div>
+          </div>
+
+          <!-- Action / Start button -->
+          <div id="host-controls">
+            <button id="btn-start-game" class="btn-primary">
+              🚀 เริ่มเกมเลย! (เริ่มเพลงพร้อมกันทุกคน)
+            </button>
+          </div>
+
+          <div id="guest-controls" style="display:none; text-align:center; padding:1.25rem 0; color:var(--text-secondary); font-weight:700;">
+            ⏳ กำลังรอหัวหน้าห้องกดเริ่มเกม... เตรียมหูฟังให้พร้อม!
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==============================================
+           SCREEN 3: COUNTDOWN SCREEN
+           ============================================== -->
+      <section id="screen-countdown" class="screen">
+        <div class="glass-panel countdown-screen-content">
+          <div class="countdown-number" id="countdown-number">3</div>
+          <div class="countdown-label">เตรียมตัวฟังเพลงให้ดี...</div>
+        </div>
+      </section>
+
+      <!-- ==============================================
+           SCREEN 4: QUIZ QUESTION SCREEN (CHOICES & TYPING)
+           ============================================== -->
+      <section id="screen-quiz" class="screen">
+        <div class="glass-panel">
+          
+          <!-- Top Info Bar -->
+          <div class="quiz-top-info">
+            <div class="question-counter-badge" id="quiz-question-counter">ข้อ 1 / 10</div>
+            <div class="streak-badge" id="quiz-streak-badge">🔥 Streak x0</div>
+          </div>
+
+          <!-- Synchronized Timer Bar -->
+          <div class="timer-bar-container">
+            <div class="timer-bar-fill" id="timer-bar-fill"></div>
+          </div>
+
+          <!-- Vinyl Turntable Visualizer -->
+          <div class="turntable-card">
+            <div class="turntable-flex">
+              <div class="vinyl-disc" id="vinyl-disc">
+                <div class="vinyl-grooves"></div>
+                <div class="vinyl-center-label">🎵</div>
+              </div>
+
+              <div class="eq-bars-wrap" id="eq-bars">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+              </div>
+            </div>
+
+            <div class="turntable-status">
+              <span class="pulse-dot"></span>
+              <span id="audio-status-text">เพลงกำลังเล่น... ฟังแล้วทายเลย!</span>
+            </div>
+          </div>
+
+          <!-- Question Prompt -->
+          <div class="question-prompt-box">
+            <h2 class="question-text" id="quiz-question-text">เพลงที่กำลังเล่นอยู่นี้ชื่อว่าเพลงอะไร?</h2>
+          </div>
+
+          <!-- ==============================================
+               MODE 1: 4 CHOICES BUTTONS
+               ============================================== -->
+          <div class="choices-grid" id="choices-grid">
+            <button class="choice-btn" data-index="0">
+              <span class="choice-badge">A</span>
+              <span class="choice-text">ตัวเลือกที่ 1</span>
+            </button>
+            <button class="choice-btn" data-index="1">
+              <span class="choice-badge">B</span>
+              <span class="choice-text">ตัวเลือกที่ 2</span>
+            </button>
+            <button class="choice-btn" data-index="2">
+              <span class="choice-badge">C</span>
+              <span class="choice-text">ตัวเลือกที่ 3</span>
+            </button>
+            <button class="choice-btn" data-index="3">
+              <span class="choice-badge">D</span>
+              <span class="choice-text">ตัวเลือกที่ 4</span>
+            </button>
+          </div>
+
+          <!-- ==============================================
+               MODE 2: TYPING INPUT WITH HINTS & SEARCH DROPDOWN
+               ============================================== -->
+          <div id="typing-mode-container" style="display:none;">
+            
+            <!-- Hints Container -->
+            <div class="hints-box">
+              <div class="hints-header">
+                <span>💡 คำใบ้ช่วยเหลือ:</span>
+                <button type="button" id="btn-request-hint" class="btn-hint-unlock">
+                  🔓 ขอคำใบ้เพิ่ม
+                </button>
+              </div>
+              <div id="hint-1" class="hint-item active">💡 คำใบ้ 1: กำลังโหลด...</div>
+              <div id="hint-2" class="hint-item">🔒 คำใบ้ 2: ปลดล็อคเมื่อเวลาผ่านไป หรือกดขอคำใบ้</div>
+              <div id="hint-3" class="hint-item">🔒 คำใบ้ 3: ปลดล็อคเมื่อใกล้หมดเวลา หรือกดขอคำใบ้</div>
+            </div>
+
+            <!-- Search Autocomplete Input -->
+            <div class="typing-search-wrapper">
+              <div class="typing-input-bar">
+                <input type="text" id="typing-answer-input" class="input-field typing-input" placeholder="พิมพ์ชื่อเพลง หรือชื่อศิลปิน..." autocomplete="off">
+                <button id="btn-submit-typing" class="btn-primary" style="margin-top:0; width:auto; padding:0.85rem 1.4rem; flex-shrink:0;">
+                  ส่งคำตอบ 🚀
+                </button>
+              </div>
+
+              <!-- Live Autocomplete Suggestion Dropdown -->
+              <div id="typing-autocomplete-dropdown" class="autocomplete-dropdown">
+                <!-- Injected via JS as user types -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ==============================================
+               MODE 6: HEARDLE (QUIZ SCREEN)
+               ============================================== -->
+          <div id="heardle-quiz-container" style="display:none;">
+            <div class="heardle-player-box" style="margin-bottom:1rem;">
+              <div class="heardle-waveform-track" id="heardle-quiz-waveform">
+                <div class="heardle-track-segment seg-1 active" title="ครั้งที่ 1"></div>
+                <div class="heardle-track-segment seg-2" title="ครั้งที่ 2"></div>
+                <div class="heardle-track-segment seg-3" title="ครั้งที่ 3"></div>
+                <div class="heardle-track-segment seg-4" title="ครั้งที่ 4"></div>
+                <div class="heardle-track-segment seg-5" title="ครั้งที่ 5"></div>
+                <div class="heardle-track-segment seg-6" title="ครั้งที่ 6 (เต็มคลิป)"></div>
+                <div class="heardle-playhead" id="heardle-quiz-playhead"></div>
+              </div>
+
+              <div class="heardle-time-row">
+                <span id="heardle-quiz-current-time">0.0s</span>
+                <span id="heardle-quiz-allowed-time">🔊 ฟังได้: 1.5 วินาที</span>
+                <span id="heardle-quiz-total-time">30.0s</span>
+              </div>
+
+              <div class="heardle-controls-row">
+                <button type="button" class="btn-heardle-play" id="btn-heardle-quiz-play">
+                  <span id="heardle-quiz-play-icon">▶️</span>
+                  <span id="heardle-quiz-play-label">ฟังเสียงตัวอย่าง (1.5 วินาที)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Attempts History (6 Slots) -->
+            <div class="heardle-attempts-list" id="heardle-quiz-attempts-list" style="margin-bottom:1rem;"></div>
+
+            <!-- Guess Input with Autocomplete & Skip -->
+            <div class="minigame-input-card">
+              <div class="autocomplete-wrapper" style="position:relative; width:100%;">
+                <input type="text" id="heardle-quiz-input" class="input-field" placeholder="🔎 พิมพ์ชื่อเพลง หรือ ศิลปิน เพื่อทาย..." autocomplete="off">
+                <div id="heardle-quiz-dropdown" class="autocomplete-dropdown"></div>
+              </div>
+              <div class="minigame-actions-row">
+                <button type="button" class="btn-secondary" id="btn-heardle-quiz-skip">
+                  ⏩ ข้าม (+ ปลดล็อคเสียงเพิ่ม)
+                </button>
+                <button type="button" class="btn-primary" id="btn-heardle-quiz-submit">
+                  🎯 ส่งคำตอบ
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==============================================
+               MODE 7: SONGDLE (QUIZ SCREEN - WORLDWIDE POOL)
+               ============================================== -->
+          <div id="songdle-quiz-container" style="display:none;">
+            <!-- Songdle Mode Header -->
+            <div class="songdle-mode-header" style="margin-bottom:1rem; text-align:center;">
+              <div style="font-size:1.2rem; font-weight:900; color:#fff; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                <span>🟩</span>
+                <span style="background:linear-gradient(135deg, #f5c542, #b8860b); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">SONGDLE: ทายเพลงปริศนา</span>
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">
+                สุ่มเพลงจากทั่วโลก • ดูคำใบ้สีในตาราง • ปลดล็อคคำใบ้เมื่อตอบผิด
+              </div>
+            </div>
+
+            <!-- Turn Banner (Single Player or Multiplayer Turn) -->
+            <div id="songdle-turn-banner" class="songdle-turn-banner">
+              <div class="songdle-turn-left">
+                <div id="songdle-turn-avatar" class="songdle-turn-avatar">🎯</div>
+                <div class="songdle-turn-text">
+                  <span id="songdle-turn-title">โหมดเล่นคนเดียว</span>
+                  <small id="songdle-turn-desc">ส่งคำตอบได้เรื่อยๆ ทุกครั้งที่ตอบผิดจะเปิดคำใบ้เพิ่ม!</small>
+                </div>
+              </div>
+              <div class="songdle-turn-right">
+                <button type="button" id="btn-songdle-quiz-new-song" class="btn-secondary btn-new-song" style="font-size:0.8rem; padding:0.45rem 0.9rem;">
+                  🔄 เปลี่ยนเพลงใหม่
+                </button>
+              </div>
+            </div>
+
+            <!-- Progressive Hints Deck (5 hints unlocked progressively on wrong guess) -->
+            <div class="songdle-hints-deck">
+              <div class="songdle-hints-header">
+                <span>💡 คำใบ้ช่วยเหลือ:</span>
+                <span id="songdle-hints-count-badge" class="songdle-hints-badge">เปิดแล้ว 0 / 5 ข้อ</span>
+              </div>
+              <div class="songdle-hints-grid" id="songdle-hints-grid">
+                <!-- Rendered dynamically via JS: 5 Hint Cards (Locked/Unlocked) -->
+              </div>
+            </div>
+
+            <!-- Color Legend -->
+            <div class="songdle-legend" style="margin-bottom:1rem;">
+              <span class="legend-badge leg-green">🟩 สีเขียว: ถูกต้อง</span>
+              <span class="legend-badge leg-orange">🟧 สีส้ม: ตรงบางส่วน / ค่ายหรือแนวเพลงใกล้เคียง</span>
+              <span class="legend-badge leg-red">🟥 สีแดง: ไม่ถูกต้อง</span>
+              <span class="legend-badge leg-arrow">⬆️ / ⬇️ ในช่องปี: เพลงปริศนาปล่อยใหม่กว่า / เก่ากว่า</span>
+            </div>
+
+            <!-- Guess Input with Autocomplete & Action Buttons -->
+            <div class="minigame-input-card" id="songdle-quiz-input-card" style="margin-bottom:1rem;">
+              <div class="autocomplete-wrapper" style="position:relative; width:100%;">
+                <input type="text" id="songdle-quiz-input" class="input-field" placeholder="🔎 พิมพ์ชื่อเพลงหรือศิลปินที่ต้องการทาย (สุ่มจากเพลงทั่วโลก)..." autocomplete="off">
+                <div id="songdle-quiz-dropdown" class="autocomplete-dropdown"></div>
+              </div>
+              <div class="songdle-actions-row">
+                <button type="button" class="btn-primary" id="btn-songdle-quiz-submit" style="flex:1;">
+                  🎯 ทายเพลงนี้!
+                </button>
+                <button type="button" class="btn-secondary btn-skip-turn" id="btn-songdle-quiz-skip-turn" style="display:none;">
+                  ⏭️ ข้ามตาของฉัน
+                </button>
+              </div>
+            </div>
+
+            <!-- Songdle Result Card (Shown when Won or Hints Run Out) -->
+            <div id="songdle-quiz-result-card" class="songdle-result-card" style="display:none;"></div>
+
+            <!-- Songdle Comparison Table -->
+            <div class="songdle-table-container">
+              <table class="songdle-table" id="songdle-quiz-table">
+                <thead>
+                  <tr>
+                    <th style="width:24%;">🎵 เพลง (Song)</th>
+                    <th style="width:20%;">👤 ศิลปิน (Artist)</th>
+                    <th style="width:14%;">🏷️ ประเภท (Type)</th>
+                    <th style="width:16%;">🎼 หมวดหมู่ (Genre)</th>
+                    <th style="width:13%;">🌍 สัญชาติ (Origin)</th>
+                    <th style="width:13%;">📅 ปีที่ปล่อย (Year)</th>
+                  </tr>
+                </thead>
+                <tbody id="songdle-quiz-tbody"></tbody>
+              </table>
+              <div id="songdle-quiz-empty-hint" style="text-align:center; padding:1.25rem; font-size:0.85rem; color:var(--text-muted);">
+                ยังไม่มีการทาย เริ่มพิมพ์ชื่อเพลงด้านบนแล้วกดทายเพื่อดูคำใบ้สี!
+              </div>
+            </div>
+          </div>
+
+          <!-- ==============================================
+               MODE 8: MUSIC VIDEO (QUIZ SCREEN)
+               ============================================== -->
+          <div id="mv-quiz-container" style="display:none;">
+            <!-- MV Mode Header -->
+            <div class="mv-mode-header" style="margin-bottom:0.85rem; text-align:center;">
+              <div style="font-size:1.2rem; font-weight:900; color:#fff; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                <span>🎬</span>
+                <span style="background:linear-gradient(135deg, #f43f5e, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">MV GUESS: ทายเพลงจาก MV</span>
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">
+                ดูคลิปตัวอย่างสั้นๆ • ปลดล็อคความยาวคลิปเมื่อตอบผิด • ทายชื่อเพลงหรือศิลปิน
+              </div>
+            </div>
+
+            <!-- Turn Banner (Single Player or Multiplayer Turn) -->
+            <div id="mv-turn-banner" class="songdle-turn-banner" style="margin-bottom:0.85rem;">
+              <div class="songdle-turn-left">
+                <div id="mv-turn-avatar" class="songdle-turn-avatar">🎬</div>
+                <div class="songdle-turn-text">
+                  <span id="mv-turn-title">โหมดเล่นคนเดียว</span>
+                  <small id="mv-turn-desc">ดูคลิปและส่งคำตอบได้เรื่อยๆ ตอบผิดจะเปิดความยาว MV เพิ่ม!</small>
+                </div>
+              </div>
+              <div class="songdle-turn-right">
+                <button type="button" id="btn-mv-quiz-new-song" class="btn-secondary btn-new-song" style="font-size:0.8rem; padding:0.45rem 0.9rem;">
+                  🔄 เปลี่ยน MV ใหม่
+                </button>
+              </div>
+            </div>
+
+            <!-- Video Player Box -->
+            <div class="mv-video-box" style="margin-bottom:0.85rem;">
+              <div class="mv-video-wrapper">
+                <video id="mv-quiz-video" class="mv-video" playsinline webkit-playsinline preload="auto" style="width:100%; height:100%; object-fit:contain; display:block; background:#000;"></video>
+                <div class="mv-video-overlay" id="mv-quiz-video-overlay">
+                  <div class="mv-overlay-badge" id="mv-quiz-allowed-badge">🎬 คลิป MV: 1.5 วินาที</div>
+                </div>
+              </div>
+
+              <!-- Timeline & Controls -->
+              <div class="mv-timeline-row">
+                <div class="mv-progress-bar">
+                  <div class="mv-progress-fill" id="mv-quiz-progress-fill"></div>
+                </div>
+                <div class="mv-time-label" id="mv-quiz-time-label">⏱️ ปลดล็อคแล้ว: 1.5 วินาที (ครั้งที่ 1/6)</div>
+              </div>
+
+              <div class="mv-controls-row">
+                <button type="button" class="btn-heardle-play" id="btn-mv-quiz-play">
+                  <span id="mv-quiz-play-icon">▶️</span>
+                  <span id="mv-quiz-play-label">ดูคลิป MV (1.5 วินาที)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Attempts / Hint Slots Tracker (6 Slots) -->
+            <div class="heardle-attempts-list" id="mv-quiz-attempts-list" style="margin-bottom:0.85rem;"></div>
+
+            <!-- Input Form & Action Buttons -->
+            <div class="minigame-input-card" id="mv-quiz-input-card" style="margin-bottom:0.85rem;">
+              <div class="autocomplete-wrapper" style="position:relative; width:100%;">
+                <input type="text" id="mv-quiz-input" class="input-field" placeholder="🔎 พิมพ์ชื่อเพลง หรือ ศิลปินของ MV นี้..." autocomplete="off">
+                <div id="mv-quiz-dropdown" class="autocomplete-dropdown"></div>
+              </div>
+              <div class="songdle-actions-row" style="margin-top:0.65rem;">
+                <button type="button" class="btn-primary" id="btn-mv-quiz-submit" style="flex:1;">
+                  🎯 ส่งคำตอบ
+                </button>
+                <button type="button" class="btn-secondary" id="btn-mv-quiz-skip-hint" title="สละสิทธิ์ครั้งนี้เพื่อปลดล็อคเวลา MV เพิ่ม">
+                  ⏩ ข้าม (+ เพิ่มเวลา MV)
+                </button>
+                <button type="button" class="btn-secondary btn-skip-turn" id="btn-mv-quiz-skip-turn" style="display:none;" title="ส่งต่อตาให้เพื่อน โดยไม่เปิดเวลา MV เพิ่ม">
+                  ⏭️ ข้ามตาของฉัน
+                </button>
+              </div>
+            </div>
+
+            <!-- MV Result Card (Shown when Won or Lost) -->
+            <div id="mv-quiz-result-card" class="songdle-result-card" style="display:none;"></div>
+          </div>
+
+          <!-- Skip / Fast-Forward Bar -->
+          <div class="round-control-bar">
+            <!-- Skip Question Button (User Pass) -->
+            <button id="btn-skip-question" class="btn-secondary" style="font-size:0.85rem;">
+              ⏩ ข้ามข้อนี้ (ยอมแพ้)
+            </button>
+
+            <!-- Host Skip Wait Time -->
+            <button id="btn-host-skip-timer" class="btn-secondary" style="display:none; font-size:0.85rem; border-color:var(--accent-yellow); color:#fbbf24;">
+              ⚡ ข้ามเวลารอ (เฉลยทันที)
+            </button>
+
+            <!-- Progress Count -->
+            <div class="answer-progress-pill">
+              <span>⚡ ตอบแล้ว: <strong id="answered-count-text">0 / 1 คน</strong></span>
+              <div class="answer-avatars-row" id="answered-avatars-row"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==============================================
+           SCREEN 5: ROUND REVEAL SCREEN
+           ============================================== -->
+      <section id="screen-reveal" class="screen">
+        <div class="glass-panel">
+          
+          <div class="reveal-card">
+            <!-- Album Artwork -->
+            <div class="album-art-wrap">
+              <img id="reveal-artwork" class="album-art-img" src="" alt="Album Art" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            </div>
+
+            <h2 class="song-title-reveal" id="reveal-title">ชื่อเพลง</h2>
+            <div class="artist-name-reveal" id="reveal-artist">ชื่อศิลปิน</div>
+            <div style="font-size:0.85rem; color:var(--text-secondary);" id="reveal-album">อัลบั้ม</div>
+
+            <!-- User Result Banner -->
+            <div id="reveal-user-banner" class="user-result-banner correct">
+              <span>🎉 ถูกต้อง! +950 แต้ม</span>
+            </div>
+          </div>
+
+          <div style="text-align:center; margin-bottom:1rem; font-size:0.95rem; color:#cbd5e1;">
+            คำตอบที่ถูกต้องคือ: <strong style="color:var(--accent-green);" id="reveal-correct-text">---</strong>
+          </div>
+
+          <!-- Round Leaderboard -->
+          <div class="section-title-bar">
+            <div class="section-title">🏆 อันดับคะแนนล่าสุด:</div>
+          </div>
+          <div class="leaderboard-list" id="reveal-leaderboard">
+            <!-- Injected via JS -->
+          </div>
+
+          <!-- Next Question Control -->
+          <div id="reveal-host-controls" style="margin-top:1.5rem;">
+            <button id="btn-next-question" class="btn-primary">
+              ข้อถัดไป ➡️
+            </button>
+          </div>
+          <div id="reveal-guest-controls" style="display:none; text-align:center; padding:1rem 0; color:var(--text-secondary); font-weight:700;">
+            ⏳ กำลังรอหัวหน้าห้องเปิดข้อถัดไป...
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==============================================
+           SCREEN 6: FINAL PODIUM SCREEN
+           ============================================== -->
+      <section id="screen-podium" class="screen">
+        <div class="glass-panel">
+          
+          <div class="hero-header">
+            <h1 class="hero-title">🎉 สรุปผลผู้ชนะ! 🎉</h1>
+            <p class="hero-subtitle">สุดยอดเซียนเพลงประจำปาร์ตี้ห้องนี้!</p>
+          </div>
+
+          <!-- 3D Podium for Top 3 -->
+          <div class="podium-container" id="podium-container">
+            <div class="podium-step step-2" id="podium-2">
+              <div class="podium-avatar-wrap">
+                <span id="podium-2-avatar">🥈</span>
+              </div>
+              <div class="podium-name" id="podium-2-name">---</div>
+              <div class="podium-score" id="podium-2-score">0 pts</div>
+              <div class="podium-pillar">2</div>
+            </div>
+
+            <div class="podium-step step-1" id="podium-1">
+              <div class="podium-avatar-wrap">
+                <span class="podium-crown">👑</span>
+                <span id="podium-1-avatar">🥇</span>
+              </div>
+              <div class="podium-name" id="podium-1-name">---</div>
+              <div class="podium-score" id="podium-1-score">0 pts</div>
+              <div class="podium-pillar">1</div>
+            </div>
+
+            <div class="podium-step step-3" id="podium-3">
+              <div class="podium-avatar-wrap">
+                <span id="podium-3-avatar">🥉</span>
+              </div>
+              <div class="podium-name" id="podium-3-name">---</div>
+              <div class="podium-score" id="podium-3-score">0 pts</div>
+              <div class="podium-pillar">3</div>
+            </div>
+          </div>
+
+          <!-- Full Scoreboard Table -->
+          <div class="section-title-bar">
+            <div class="section-title">📊 ตารางคะแนนรวมทั้งหมด:</div>
+          </div>
+          <div class="leaderboard-list" id="final-leaderboard">
+            <!-- Injected via JS -->
+          </div>
+
+          <!-- Play Again / Home Controls -->
+          <div style="display:flex; gap:0.75rem; margin-top:1.5rem; flex-wrap:wrap;">
+            <button id="btn-play-again" class="btn-primary" style="flex:1; margin-top:0;">
+              🔄 เล่นใหม่อีกรอบ!
+            </button>
+            <button id="btn-go-home" class="btn-secondary" style="flex:1;">
+              🏠 กลับหน้าหลัก
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Edit Profile Modal (Name & Avatar) -->
+  <div id="modal-edit-profile" class="modal-overlay">
+    <div class="modal-card edit-profile-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <h3 style="color:#fff; font-size:1.2rem; font-weight:800; margin:0;">✏️ แก้ไขชื่อ & อวาตาร์</h3>
+        <button id="btn-close-edit-modal" class="icon-btn" style="width:32px; height:32px;" title="ปิด">✕</button>
+      </div>
+
+      <div class="edit-profile-body" style="text-align:left;">
+        <div class="form-group-compact" style="margin-bottom:1rem;">
+          <label class="compact-label" for="edit-name-input">👤 ชื่อของคุณในเกม (Player Name):</label>
+          <input type="text" id="edit-name-input" class="input-field" placeholder="ใส่ชื่อเล่นของคุณ..." maxlength="15" style="margin-top:0.35rem; width:100%;">
+        </div>
+
+        <div class="form-group-compact" style="margin-bottom:1.25rem;">
+          <label class="compact-label">🎭 เลือกอวาตาร์ประจำตัว (Avatar):</label>
+          <div class="avatar-grid compact-avatars" id="edit-avatar-grid" style="margin-top:0.5rem;">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; margin-top:1.25rem;">
+          <button id="btn-save-edit-profile" class="btn-primary" style="margin-top:0; flex:1;">
+            💾 บันทึก
+          </button>
+          <button id="btn-cancel-edit-profile" class="btn-secondary" style="margin-top:0;">
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div id="modal-qr" class="modal-overlay">
+    <div class="modal-card">
+      <h3 style="color:#fff; font-size:1.25rem; font-weight:800;">📱 สแกน QR Code เพื่อเข้าห้อง</h3>
+      <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.25rem;">เปิดกล้องมือถือสแกนแล้วเล่นได้ทันที</p>
+      
+      <img id="qr-image" class="modal-qr-img" src="" alt="QR Code">
+
+      <div style="margin-bottom:1rem;">
+        <span style="font-size:0.8rem; color:var(--text-secondary);">หรือเข้าผ่านลิงก์:</span>
+        <div id="qr-modal-url" style="font-size:0.8rem; color:var(--accent-cyan); word-break:break-all; font-weight:700; margin-top:0.2rem;"></div>
+      </div>
+
+      <button id="btn-close-qr" class="btn-primary" style="margin-top:0;">
+        ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-msg" class="toast-msg">ข้อความแจ้งเตือน</div>
+
+  <!-- Socket.IO Client Library -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Sound FX Synthesizer -->
+  <script src="js/soundEffects.js"></script>
+
+  <!-- Client Game Engine -->
+  <script src="js/client.js"></script>
+
+</body>
+</html>
