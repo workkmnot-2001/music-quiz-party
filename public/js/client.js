@@ -1221,8 +1221,8 @@
       }
 
       // Populate Reveal Screen with Artwork
-      const fallbackArt = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
-      revealArtwork.src = revealData.trackInfo.artwork || fallbackArt;
+      const fallbackArt = '/images/default_cover.svg';
+      revealArtwork.src = (revealData.trackInfo.artwork && !revealData.trackInfo.artwork.includes('unsplash.com')) ? revealData.trackInfo.artwork : fallbackArt;
       revealArtwork.onerror = function () {
         this.src = fallbackArt;
       };
@@ -2325,7 +2325,7 @@
           row.innerHTML = `
             <td>
               <div class="songdle-cell cell-${comp.song.status} songdle-cell-song">
-                <img src="${(g.track && g.track.artwork) || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'}" class="cell-art" alt="">
+                <img src="${(g.track && g.track.artwork && !g.track.artwork.includes('unsplash.com')) ? g.track.artwork : '/images/default_cover.svg'}" class="cell-art" alt="">
                 <div class="songdle-song-text">
                   <div class="cell-val">${escapeHTML(comp.song.value)}</div>
                   ${!isSingle ? `<div class="songdle-player-tag">${g.playerAvatar || '🎧'} ${escapeHTML(g.playerName || 'ผู้เล่น')}</div>` : ''}
@@ -2383,7 +2383,7 @@
           </div>
           ${state.fullTrack ? `
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
-              <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
+              <img src="${(state.fullTrack.artwork && !state.fullTrack.artwork.includes('unsplash.com')) ? state.fullTrack.artwork : '/images/default_cover.svg'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
             <div style="font-size:1.25rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
@@ -2428,7 +2428,7 @@
           </div>
           ${state.fullTrack ? `
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
-              <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
+              <img src="${(state.fullTrack.artwork && !state.fullTrack.artwork.includes('unsplash.com')) ? state.fullTrack.artwork : '/images/default_cover.svg'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
             <div style="font-size:1.25rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
@@ -2841,7 +2841,7 @@
           </div>
           ${state.fullTrack ? `
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
-              <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
+              <img src="${(state.fullTrack.artwork && !state.fullTrack.artwork.includes('unsplash.com')) ? state.fullTrack.artwork : '/images/default_cover.svg'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
             <div style="font-size:1.3rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
@@ -2888,7 +2888,7 @@
           </div>
           ${state.fullTrack ? `
             <div style="display:flex; justify-content:center; margin-bottom:0.85rem;">
-              <img src="${state.fullTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
+              <img src="${(state.fullTrack.artwork && !state.fullTrack.artwork.includes('unsplash.com')) ? state.fullTrack.artwork : '/images/default_cover.svg'}" style="width:130px; height:130px; border-radius:12px; object-fit:cover; display:block; box-shadow:0 8px 30px rgba(0,0,0,0.6);" alt="">
             </div>
             <div style="font-size:1.3rem; font-weight:900; color:#fff;">${escapeHTML(state.fullTrack.title)}</div>
             <div style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:0.75rem;">
@@ -3000,7 +3000,7 @@
         row.className = 'autocomplete-item';
         row.dataset.index = idx;
 
-        const artSrc = item.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100';
+        const artSrc = (item.artwork && !item.artwork.includes('unsplash.com')) ? item.artwork : '/images/default_cover.svg';
         row.innerHTML = `
           <div class="ac-art-box">
             <img src="${artSrc}" class="ac-art" loading="lazy" onerror="this.parentElement.innerHTML='🎵';">
@@ -3371,7 +3371,7 @@
         ${isWin ? `🎉 ยอดเยี่ยมมาก! คุณทายถูกในครั้งที่ ${heardleGuesses.length} (${HEARDLE_DIFFICULTIES[heardleCurrentDiff][heardleAttempt].toFixed(1)}s)` : '❌ เสียดายจัง! หมดโควตาทายแล้ว'}
       </div>
       <div class="result-art-wrapper">
-        <img src="${heardleTrack.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" alt="">
+        <img src="${(heardleTrack.artwork && !heardleTrack.artwork.includes('unsplash.com')) ? heardleTrack.artwork : '/images/default_cover.svg'}" alt="">
       </div>
       <div class="result-song-title">${heardleTrack.title}</div>
       <div class="result-song-artist">โดย ${heardleTrack.artist} (${heardleTrack.year || ''})</div>
@@ -3479,7 +3479,7 @@
     tr.innerHTML = `
       <td>
         <div class="songdle-cell ${res.song.status === 'green' ? 'cell-green' : 'cell-red'} songdle-cell-song">
-          <img src="${res.song.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'}" class="cell-art" alt="">
+          <img src="${(res.song.artwork && !res.song.artwork.includes('unsplash.com')) ? res.song.artwork : '/images/default_cover.svg'}" class="cell-art" alt="">
           <div class="songdle-song-text">
             <span class="cell-val">${escapeHTML(res.song.value)}</span>
           </div>
@@ -3529,7 +3529,7 @@
         🎉 ชนะแล้ว! คุณทายเพลงปริศนาถูกต้องเป็นสีเขียวทั้งหมด!
       </div>
       <div class="result-art-wrapper">
-        <img src="${track.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" alt="">
+        <img src="${(track.artwork && !track.artwork.includes('unsplash.com')) ? track.artwork : '/images/default_cover.svg'}" alt="">
       </div>
       <div class="result-song-title">${track.title}</div>
       <div class="result-song-artist">โดย ${track.artist} (${track.year || ''})</div>

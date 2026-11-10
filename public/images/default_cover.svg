@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <radialGradient id="vinyl" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#242738"/>
+      <stop offset="45%" stop-color="#141724"/>
+      <stop offset="75%" stop-color="#0a0c13"/>
+      <stop offset="100%" stop-color="#040507"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd768"/>
+      <stop offset="50%" stop-color="#f5c542"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+  
+  <!-- Outer Background -->
+  <rect width="300" height="300" rx="16" fill="url(#vinyl)"/>
+  
+  <!-- Vinyl Grooves -->
+  <circle cx="150" cy="150" r="126" fill="none" stroke="#d4af37" stroke-opacity="0.18" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <circle cx="150" cy="150" r="105" fill="none" stroke="#d4af37" stroke-opacity="0.12" stroke-width="1" stroke-dasharray="3 5"/>
+  <circle cx="150" cy="150" r="84" fill="none" stroke="#d4af37" stroke-opacity="0.15" stroke-width="1.5" stroke-dasharray="5 7"/>
+  <circle cx="150" cy="150" r="62" fill="none" stroke="#d4af37" stroke-opacity="0.2" stroke-width="2"/>
+  
+  <!-- Center Gold Disc -->
+  <circle cx="150" cy="150" r="46" fill="url(#gold)" filter="url(#shadow)"/>
+  <circle cx="150" cy="150" r="42" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1"/>
+  <circle cx="150" cy="150" r="12" fill="#0a0c13"/>
+  <circle cx="150" cy="150" r="4" fill="#f5c542"/>
+  
+  <!-- Musical Icon -->
+  <path d="M146 137v18.5a5.5 5.5 0 1 1-3-4.8V133l18-4v19.5a5.5 5.5 0 1 1-3-4.8V132l-12 2.7z" fill="#0a0c13"/>
+</svg>

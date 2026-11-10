@@ -40,3 +40,4 @@
   - [public/index.html](file:///c:/Users/notz/Desktop/new-my-game/public/index.html): SPA layouts (Lobby, Room, Quiz screens for Choices, Typing, Heardle, Songdle, MV, Reveal, Podium).
   - [public/css/style.css](file:///c:/Users/notz/Desktop/new-my-game/public/css/style.css): Obsidian-Gold theme, responsive layout, glassmorphism panels (`.glass-panel`), typography, game mode containers.
   - [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js): Socket.io client handlers, UI updates, audio player management, inputs, timer, and score rendering.
+

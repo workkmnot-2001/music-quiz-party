@@ -650,7 +650,7 @@ async function fetchTracksFromITunes(query, country = 'th') {
         previewUrl: t.previewUrl,
         artwork: t.artworkUrl100
           ? t.artworkUrl100.replace('100x100bb', '600x600bb')
-          : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+          : '/images/default_cover.svg',
         source: 'itunes'
       }))
       .filter(t => t.title && t.artist);
@@ -694,7 +694,7 @@ async function fetchTracksFromDeezer(query) {
         album: t.album?.title || '',
         year: t.release_date ? parseInt(t.release_date.substring(0, 4), 10) : (t.album?.release_date ? parseInt(t.album.release_date.substring(0, 4), 10) : 2021),
         previewUrl: t.preview, // 30s mp3 stream
-        artwork: t.album?.cover_xl || t.album?.cover_big || t.album?.cover_medium || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+        artwork: t.album?.cover_xl || t.album?.cover_big || t.album?.cover_medium || '/images/default_cover.svg',
         source: 'deezer'
       }))
       .filter(t => t.title && t.artist);

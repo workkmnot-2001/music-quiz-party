@@ -6,50 +6,40 @@
 
 ## 📌 สรุปการแก้ไขล่าสุด (Latest Changes)
 
-### 1. ปรับความกว้าง Glass-Panel & สไตล์ตาราง Songdle และตัวอักษร
+### 1. ลบรูปปกไมโครโฟนเก่าทั้งหมด & ดึงรูปปกอัลบั้มจริง 100% (Real Album Artwork Overhaul)
 - **ไฟล์ที่เกี่ยวข้อง**:
-  - [public/css/style.css](file:///c:/Users/notz/Desktop/new-my-game/public/css/style.css)
-  - [public/index.html](file:///c:/Users/notz/Desktop/new-my-game/public/index.html)
-  - [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js)
-- **ค่าและพฤติกรรมล่าสุด**:
-  - `.game-main-area`: ขยาย `max-width` จาก 850px เป็น **1180px** (และ **1280px** สำหรับจอ 1440px+), เพิ่ม padding เป็น `1.75rem 2.25rem`
-  - `.glass-panel`: เพิ่ม padding เป็น `2.25rem 2.5rem`
-  - ตาราง Songdle: กำหนด `min-width: 820px`, คอลัมน์เพลงกว้าง 28%, กระเบื้องเซลล์ปรับเป็น `min-height: 72px; height: auto;` และแสดงรูปปกคู่กับชื่อเพลงแนวนอน (`flex-direction: row`)
-  - Typography: ปรับ `line-height: 1.45 - 1.55` และ `letter-spacing: 0.25px` เพื่อไม่ให้สระและวรรณยุกต์ภาษาไทยซ้อนทับหรือเบียดกัน
-- **เหตุผลที่แก้**: ภาพจากผู้ใช้พบว่าตัวหนังสือในตาราง Songdle ล้นและหลุดออกจากช่องสี่เหลี่ยม และตัวอักษรเบียดกันอ่านยาก
-
-### 2. เพิ่มหมวดหมู่ "แร็ป & ฮิปฮอปไทย" (Thai Rap & Hip-Hop)
-- **ไฟล์ที่เกี่ยวข้อง**:
-  - [server/musicService.js](file:///c:/Users/notz/Desktop/new-my-game/server/musicService.js)
-  - [server/seedData.json](file:///c:/Users/notz/Desktop/new-my-game/server/seedData.json)
+  - [server/comprehensiveCatalog.json](file:///c:/Users/notz/Desktop/new-my-game/server/comprehensiveCatalog.json)
+  - [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js)
   - [server/gameModesService.js](file:///c:/Users/notz/Desktop/new-my-game/server/gameModesService.js)
-- **ค่าและพฤติกรรมล่าสุด**: เพิ่มหมวดหมู่ `thai_rap` พร้อม Seed เพลงฮิต 79+ เพลง (YOUNGOHM, F.HERO, SARAN, SPRITE, 1MILL, URBOYTJ, ILLSLICK ฯลฯ) มีเสียงพรีวิวครบ และล็อกหมวดหมู่ไม่ให้เพลงอื่นปน
-- **เหตุผลที่แก้**: ผู้ใช้ต้องการให้มีหมวดเพลงแร็ปเปอร์ไทยโดยเฉพาะ
-
-### 3. ปุ่มจบเกมทันทีของหัวหน้าห้อง (Host End Game)
-- **ไฟล์ที่เกี่ยวข้อง**:
-  - [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js)
-  - [public/index.html](file:///c:/Users/notz/Desktop/new-my-game/public/index.html)
-  - [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js)
-  - [public/css/style.css](file:///c:/Users/notz/Desktop/new-my-game/public/css/style.css)
-- **ค่าและพฤติกรรมล่าสุด**: ปุ่ม `🛑 จบเกม (สรุปคะแนน)` แสดงในแถบควบคุมข้อและหน้าเฉลย เมื่อกดจะยืนยันและคำนวณคะแนนรวมข้อล่าสุดทันที แล้วพาไปหน้าโพเดียมสรุปคะแนน
-- **เหตุผลที่แก้**: ผู้ใช้ต้องการจบเกมก่อนครบจำนวนข้อที่ตั้งไว้ และต้องการให้นับคะแนนข้อล่าสุดที่เพิ่งเล่นจบด้วย
-
-### 4. แก้ปัญหาเพลงไม่ตรงหมวดลูกทุ่ง (Strict Category Isolation)
-- **ไฟล์ที่เกี่ยวข้อง**:
+  - [server/searchService.js](file:///c:/Users/notz/Desktop/new-my-game/server/searchService.js)
   - [server/musicService.js](file:///c:/Users/notz/Desktop/new-my-game/server/musicService.js)
-  - [server/seedData.json](file:///c:/Users/notz/Desktop/new-my-game/server/seedData.json)
-- **ค่าและพฤติกรรมล่าสุด**: ล็อกทั้งคำถามและตัวเลือกช้อยส์หลอกให้ดึงเฉพาะ Seed ลูกทุ่ง & เพื่อชีวิต 100% ไม่มีเพลงร็อก/สตริงหลุดมา
-- **เหตุผลที่แก้**: มีเพลงสตริงอย่าง Cocktail และ KLEAR หลุดมาในหมวดลูกทุ่ง
+  - [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js)
+  - [public/images/default_cover.svg](file:///c:/Users/notz/Desktop/new-my-game/public/images/default_cover.svg)
+- **ค่าและพฤติกรรมล่าสุด**:
+  - อัปเดตเพลงทั้ง 150 เพลงใน `comprehensiveCatalog.json` ให้มีรูปปกอัลบั้มจริงระดับ HD (จาก Apple Music mzstatic และ Deezer cdn-images) ไม่มีรูป Unsplash ไมโครโฟนหลงเหลืออีกต่อไป (0/150)
+  - ในระบบ Songdle เมื่อผู้เล่นพิมพ์ทายเพลง ระบบจะตรวจสอบและดึงรูปปกเพลงจริงมาแสดงให้อัตโนมัติทันที
+  - สร้างไฟล์เวกเตอร์ `public/images/default_cover.svg` (แผ่นเสียงสีทอง Obsidian-Gold) เพื่อใช้เป็น Fallback สำรองแบบโมเดิร์น สวยงาม แทนที่รูปไมโครโฟนสต็อกเก่า
+- **เหตุผลที่แก้**: ผู้ใช้แจ้งให้แก้ไขเพลงทั้งหมดที่มีรูปปกไมโครโฟนสต็อก ให้แสดงรูปปกอัลบั้มจริงที่ถูกต้อง
 
-### 5. แก้บั๊กเพลงไม่ตรงกับหน้าเฉลย (Song Desync)
-- **ไฟล์ที่เกี่ยวข้อง**:
-  - [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js)
-- **ค่าและพฤติกรรมล่าสุด**: ซิงค์ `room.questions[room.currentQuestionIndex]` ให้ตรงกับเพลงที่สุ่มใหม่ใน Songdle / MV เสมอ หน้าเฉลยแสดงเพลงถูกต้อง 100% และบันทึกคำตอบพิมพ์จริง
-- **เหตุผลที่แก้**: ผู้เล่นทายเพลง NewJeans ในโหมด MV แต่หน้าเฉลยกลับแสดงเป็นเพลง Charlie Puth
+### 2. ปรับความกว้าง Glass-Panel & สไตล์ตาราง Songdle และตัวอักษร
+- **ไฟล์ที่เกี่ยวข้อง**: [public/css/style.css](file:///c:/Users/notz/Desktop/new-my-game/public/css/style.css), [public/index.html](file:///c:/Users/notz/Desktop/new-my-game/public/index.html), [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js)
+- **ค่าและพฤติกรรมล่าสุด**: `.game-main-area` max-width 1180px - 1280px, ตาราง Songdle min-width 820px คอลัมน์เพลง 28%, min-height 72px แบบ row layout, line-height 1.45 - 1.55
+- **เหตุผลที่แก้**: ฟอนต์ล้นหลุดกระเบื้องและตัวอักษรเบียดกัน
+
+### 3. เพิ่มหมวดหมู่ "แร็ป & ฮิปฮอปไทย" (Thai Rap & Hip-Hop)
+- **ไฟล์ที่เกี่ยวข้อง**: [server/musicService.js](file:///c:/Users/notz/Desktop/new-my-game/server/musicService.js), [server/seedData.json](file:///c:/Users/notz/Desktop/new-my-game/server/seedData.json), [server/gameModesService.js](file:///c:/Users/notz/Desktop/new-my-game/server/gameModesService.js)
+- **ค่าและพฤติกรรมล่าสุด**: เพิ่มหมวดหมู่ `thai_rap` พร้อม 79+ เพลงฮิตและเสียงพรีวิว
+
+### 4. ปุ่มจบเกมทันทีของหัวหน้าห้อง (Host End Game)
+- **ไฟล์ที่เกี่ยวข้อง**: [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js), [public/index.html](file:///c:/Users/notz/Desktop/new-my-game/public/index.html), [public/js/client.js](file:///c:/Users/notz/Desktop/new-my-game/public/js/client.js)
+- **ค่าและพฤติกรรมล่าสุด**: สรุปคะแนนข้อล่าสุดและพาไปโพเดียมทันที
+
+### 5. ล็อกหมวดหมู่ลูกทุ่ง & แก้เพลงไม่ตรงกับหน้าเฉลย
+- **ไฟล์ที่เกี่ยวข้อง**: [server/musicService.js](file:///c:/Users/notz/Desktop/new-my-game/server/musicService.js), [server/index.js](file:///c:/Users/notz/Desktop/new-my-game/server/index.js)
+- **ค่าและพฤติกรรมล่าสุด**: แยก Seed ลูกทุ่ง & เพื่อชีวิต 100% และซิงค์เป้าหมายเพลงให้ตรงกับหน้าเฉลย
 
 ---
 
 ## ⏳ งานที่ยังค้าง / ขั้นตอนถัดไป (Pending & Next Tasks)
 1. **Push โค้ดขึ้น GitHub เพื่อ Deploy Render**: รัน `git push origin main` เมื่อพร้อม เพื่อให้ Render ทำการ Auto-Deploy เวอร์ชันใหม่
-2. **ทดสอบการเล่นหลายอุปกรณ์ (Multiplayer Verification)**: หากมีการเพิ่มฟีเจอร์ใหม่ ให้ทดสอบความเข้ากันได้ของหน้าจอมือถือและเดสก์ท็อป
+2. **ทดสอบการเล่นหลายอุปกรณ์ (Multiplayer Verification)**: ทดสอบการเล่นในห้องรวม

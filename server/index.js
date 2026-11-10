@@ -934,7 +934,7 @@ io.on('connection', (socket) => {
   });
 
   // Songdle guess in round (Rule-based: single player continuous, multiplayer turn-based)
-  socket.on('submit_songdle_guess', ({ guessTrack, guessId, guessText }) => {
+  socket.on('submit_songdle_guess', async ({ guessTrack, guessId, guessText }) => {
     const room = rooms.get(socket.roomCode);
     if (!room || room.state !== 'quiz' || !room.songdleState) return;
     if (room.songdleState.status !== 'playing') return;
@@ -989,7 +989,7 @@ io.on('connection', (socket) => {
         id: `user_${Date.now()}`,
         title,
         artist,
-        artwork: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600',
+        artwork: (guessTrack && guessTrack.artwork) || '',
         artistType: getArtistMetadata(artist).type,
         genre: getArtistMetadata(artist).genre,
         country: getArtistMetadata(artist).country,
@@ -998,12 +998,27 @@ io.on('connection', (socket) => {
       };
     }
 
-    // Ensure metadata fields are present
+    // Check & resolve real album artwork if missing or fallback
+    if (!resolved.artwork || resolved.artwork.includes('unsplash.com')) {
+      if (guessTrack && guessTrack.artwork && !guessTrack.artwork.includes('unsplash.com')) {
+        resolved.artwork = guessTrack.artwork;
+      } else {
+        try {
+          const auto = await searchAutocomplete(`${resolved.title} ${resolved.artist}`);
+          if (auto && auto.length > 0 && auto[0].artwork && !auto[0].artwork.includes('unsplash.com')) {
+            resolved.artwork = auto[0].artwork;
+            if (auto[0].year && !resolved.year) resolved.year = auto[0].year;
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Ensure metadata fields are present and artwork is never unsplash
     const cleanGuess = {
       id: resolved.id || `${resolved.title}_${resolved.artist}`.toLowerCase().replace(/[\s\-_]/g, ''),
       title: resolved.title,
       artist: resolved.artist,
-      artwork: resolved.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100',
+      artwork: (resolved.artwork && !resolved.artwork.includes('unsplash.com')) ? resolved.artwork : '/images/default_cover.svg',
       artistType: resolved.artistType || (getArtistMetadata(resolved.artist).type),
       genre: resolved.genre || (getArtistMetadata(resolved.artist).genre),
       country: resolved.country || (getArtistMetadata(resolved.artist).country),
