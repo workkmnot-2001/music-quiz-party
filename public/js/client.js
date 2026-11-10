@@ -113,13 +113,48 @@
   const gameModeBoxes = document.querySelectorAll('.game-mode-box');
   const btnSelectAllModes = document.getElementById('btn-select-all-modes');
   let selectedGameMode = 'choices';
+  try {
+    const savedMode = localStorage.getItem('musicQuiz_gameMode');
+    if (savedMode) selectedGameMode = savedMode;
+  } catch (e) {}
+
   const mainCatBoxes = document.getElementById('main-cat-boxes');
   const btnSelectAllCats = document.getElementById('btn-select-all-cats');
   let selectedMainCategoryId = 'mix';
+  try {
+    const savedMainCat = localStorage.getItem('musicQuiz_mainCat');
+    if (savedMainCat) selectedMainCategoryId = savedMainCat;
+  } catch (e) {}
+
   const selectSubCategory = document.getElementById('select-sub-category');
   const subCategoryGroup = document.getElementById('sub-category-group');
   const selectQuestionCount = document.getElementById('select-question-count');
   const selectRoundTimer = document.getElementById('select-round-timer');
+
+  try {
+    const savedQCount = localStorage.getItem('musicQuiz_questionCount');
+    if (savedQCount && selectQuestionCount) selectQuestionCount.value = savedQCount;
+    const savedTimer = localStorage.getItem('musicQuiz_roundTimer');
+    if (savedTimer && selectRoundTimer) selectRoundTimer.value = savedTimer;
+  } catch (e) {}
+
+  // Function to save current lobby settings to localStorage
+  function saveLobbySettings() {
+    try {
+      localStorage.setItem('musicQuiz_gameMode', selectedGameMode || 'choices');
+      localStorage.setItem('musicQuiz_mainCat', selectedMainCategoryId || 'mix');
+      if (selectSubCategory && selectSubCategory.value) {
+        localStorage.setItem('musicQuiz_subCat', selectSubCategory.value);
+      }
+      if (selectQuestionCount) {
+        localStorage.setItem('musicQuiz_questionCount', selectQuestionCount.value);
+      }
+      if (selectRoundTimer) {
+        localStorage.setItem('musicQuiz_roundTimer', selectRoundTimer.value);
+      }
+    } catch (e) {}
+  }
+
   const roomCodeInput = document.getElementById('room-code-input');
   const btnCreateRoom = document.getElementById('btn-create-room');
   const btnJoinRoom = document.getElementById('btn-join-room');
@@ -231,6 +266,7 @@
   async function init() {
     generateRandomName();
     setupEventListeners();
+    updateGameModeSelectionUI();
     setupSocket();
     await loadCategoriesData();
     checkUrlParams();
@@ -394,6 +430,7 @@
       box.addEventListener('click', () => {
         selectedMainCategoryId = main.id;
         updateCategorySelectionUI();
+        saveLobbySettings();
         window.soundFX?.playClick();
         updateSubCategoryDropdown();
       });
@@ -433,6 +470,14 @@
         opt.textContent = `${sub.name}`;
         selectSubCategory.appendChild(opt);
       });
+
+      // Restore saved subcategory if matching!
+      try {
+        const savedSubCat = localStorage.getItem('musicQuiz_subCat');
+        if (savedSubCat && Array.from(selectSubCategory.options).some(o => o.value === savedSubCat)) {
+          selectSubCategory.value = savedSubCat;
+        }
+      } catch (e) {}
     }
   }
 
@@ -752,6 +797,7 @@
     btnSelectAllModes?.addEventListener('click', () => {
       selectedGameMode = 'mixed';
       updateGameModeSelectionUI();
+      saveLobbySettings();
       window.soundFX?.playClick();
     });
 
@@ -759,6 +805,7 @@
       box.addEventListener('click', () => {
         selectedGameMode = box.dataset.mode || 'choices';
         updateGameModeSelectionUI();
+        saveLobbySettings();
         window.soundFX?.playClick();
       });
     });
@@ -767,9 +814,15 @@
     btnSelectAllCats?.addEventListener('click', () => {
       selectedMainCategoryId = 'mix';
       updateCategorySelectionUI();
+      saveLobbySettings();
       window.soundFX?.playClick();
       updateSubCategoryDropdown();
     });
+
+    // Save settings when dropdown values change
+    selectSubCategory?.addEventListener('change', saveLobbySettings);
+    selectQuestionCount?.addEventListener('change', saveLobbySettings);
+    selectRoundTimer?.addEventListener('change', saveLobbySettings);
 
     // Room Actions
     btnCreateRoom.addEventListener('click', handleCreateRoom);
@@ -1508,7 +1561,7 @@
     window.soundFX?.init();
     window.soundFX?.playClick();
 
-    // Collect settings from UI
+    // Collect settings from UI & persist to localStorage
     const gameMode = selectedGameMode || 'choices';
     const mainCat = selectedMainCategoryId || 'mix';
     const subCat = selectSubCategory ? selectSubCategory.value : mainCat;
@@ -1516,6 +1569,7 @@
 
     const questionCount = parseInt(selectQuestionCount.value, 10);
     const timePerRound = parseInt(selectRoundTimer.value, 10);
+    saveLobbySettings();
 
     socket.emit('create_room', {
       name,
@@ -1633,6 +1687,34 @@
   }
 
   function handleLeaveRoom() {
+    window.soundFX?.playClick();
+    // Save last played room settings so returning to lobby locks and preserves them!
+    if (currentRoom && currentRoom.settings) {
+      try {
+        const s = currentRoom.settings;
+        if (s.gameMode) localStorage.setItem('musicQuiz_gameMode', s.gameMode);
+        if (s.categories && s.categories.length > 0) {
+          const cat = s.categories[0];
+          let foundMain = null;
+          if (mainCategoriesData[cat]) {
+            foundMain = cat;
+          } else {
+            for (const m of Object.values(mainCategoriesData)) {
+              if (m.subcategories && m.subcategories.some(sub => sub.id === cat)) {
+                foundMain = m.id;
+                break;
+              }
+            }
+          }
+          if (foundMain) localStorage.setItem('musicQuiz_mainCat', foundMain);
+          localStorage.setItem('musicQuiz_subCat', cat);
+        }
+        if (s.questionCount) localStorage.setItem('musicQuiz_questionCount', s.questionCount);
+        if (s.timePerRound) localStorage.setItem('musicQuiz_roundTimer', s.timePerRound);
+      } catch (e) {}
+    } else {
+      saveLobbySettings();
+    }
     window.location.href = window.location.pathname;
   }
 
