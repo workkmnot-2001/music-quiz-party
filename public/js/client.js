@@ -196,6 +196,8 @@
   // Skip / Fast-Forward
   const btnSkipQuestion = document.getElementById('btn-skip-question');
   const btnHostSkipTimer = document.getElementById('btn-host-skip-timer');
+  const btnHostEndGameQuiz = document.getElementById('btn-host-end-game-quiz');
+  const btnHostEndGameReveal = document.getElementById('btn-host-end-game-reveal');
   const answeredCountText = document.getElementById('answered-count-text');
   const answeredAvatarsRow = document.getElementById('answered-avatars-row');
 
@@ -562,6 +564,17 @@
         return;
       }
 
+      // 1.1 Immediate Game End (Host Click)
+      const endBtn = e.target.closest('.btn-advance-end-game, .btn-host-end-game');
+      if (endBtn) {
+        if (!myPlayer.isHost) return;
+        if (confirm('คุณต้องการจบเกมทันที และสรุปคะแนนรวมถึงข้อนี้ใช่หรือไม่?')) {
+          window.soundFX?.playClick();
+          socket.emit('host_end_game');
+        }
+        return;
+      }
+
       // 2. Restart song in current round
       const restartBtn = e.target.closest('.btn-songdle-restart');
       if (restartBtn) {
@@ -714,6 +727,8 @@
     btnJoinRoom.addEventListener('click', handleJoinRoom);
     btnStartGame.addEventListener('click', handleStartGame);
     btnNextQuestion.addEventListener('click', handleNextQuestion);
+    if (btnHostEndGameReveal) btnHostEndGameReveal.addEventListener('click', handleHostEndGame);
+    if (btnHostEndGameQuiz) btnHostEndGameQuiz.addEventListener('click', handleHostEndGame);
     btnPlayAgain.addEventListener('click', handlePlayAgain);
     btnGoHome.addEventListener('click', handleLeaveRoom);
     btnLeaveRoom.addEventListener('click', handleLeaveRoom);
@@ -985,8 +1000,10 @@
 
       if (myPlayer.isHost) {
         btnHostSkipTimer.style.display = 'inline-flex';
+        if (btnHostEndGameQuiz) btnHostEndGameQuiz.style.display = 'inline-flex';
       } else {
         btnHostSkipTimer.style.display = 'none';
+        if (btnHostEndGameQuiz) btnHostEndGameQuiz.style.display = 'none';
       }
 
       // Check Round Mode: Choices, Year, Typing, Heardle, Songdle, or MV
@@ -1014,6 +1031,9 @@
             btnHostSkipTimer.style.display = 'inline-flex';
             btnHostSkipTimer.textContent = '⏩ ข้ามข้อนี้';
           }
+          if (btnHostEndGameQuiz) {
+            btnHostEndGameQuiz.style.display = 'inline-flex';
+          }
         }
         if (songdleQuizContainer) songdleQuizContainer.style.display = 'block';
         initSongdleQuizRound(roundData);
@@ -1028,6 +1048,9 @@
           if (btnHostSkipTimer) {
             btnHostSkipTimer.style.display = 'inline-flex';
             btnHostSkipTimer.textContent = '⏩ ข้ามข้อนี้';
+          }
+          if (btnHostEndGameQuiz) {
+            btnHostEndGameQuiz.style.display = 'inline-flex';
           }
         }
         if (mvQuizContainer) mvQuizContainer.style.display = 'block';
@@ -1542,6 +1565,14 @@
     btnNextQuestion.disabled = true;
     window.soundFX?.playClick();
     socket.emit('next_question');
+  }
+
+  function handleHostEndGame() {
+    if (!myPlayer.isHost) return;
+    if (confirm('คุณต้องการจบเกมทันที และสรุปคะแนนรวมถึงข้อนี้ใช่หรือไม่?')) {
+      window.soundFX?.playClick();
+      socket.emit('host_end_game');
+    }
   }
 
   function handlePlayAgain() {
@@ -2368,8 +2399,11 @@
             <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 6 วินาที...</div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
               ${myPlayer.isHost ? `
-                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 1.75rem;">
                   ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+                <button type="button" class="btn-secondary btn-advance-end-game" style="padding:0.75rem 1.25rem; border-color:#ef4444; color:#f87171; font-weight:700;">
+                  🛑 สรุปคะแนน & จบเกม
                 </button>
               ` : ''}
               <button type="button" class="btn-secondary btn-songdle-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
@@ -2410,8 +2444,11 @@
             <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 6 วินาที...</div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
               ${myPlayer.isHost ? `
-                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 1.75rem;">
                   ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+                <button type="button" class="btn-secondary btn-advance-end-game" style="padding:0.75rem 1.25rem; border-color:#ef4444; color:#f87171; font-weight:700;">
+                  🛑 สรุปคะแนน & จบเกม
                 </button>
               ` : ''}
               <button type="button" class="btn-secondary btn-songdle-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
@@ -2815,8 +2852,11 @@
             <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 7 วินาที...</div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
               ${myPlayer.isHost ? `
-                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 1.75rem;">
                   ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+                <button type="button" class="btn-secondary btn-advance-end-game" style="padding:0.75rem 1.25rem; border-color:#ef4444; color:#f87171; font-weight:700;">
+                  🛑 สรุปคะแนน & จบเกม
                 </button>
               ` : ''}
               <button type="button" class="btn-secondary btn-mv-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">
@@ -2859,8 +2899,11 @@
             <div style="font-size:0.9rem; color:#f5c542; font-weight:700;">⏳ กำลังไปหน้ารวมคะแนน / ข้อถัดไปใน 7 วินาที...</div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
               ${myPlayer.isHost ? `
-                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 2rem;">
+                <button type="button" class="btn-primary btn-advance-round" style="padding:0.75rem 1.75rem;">
                   ⏩ ไปข้อถัดไปทันที (Next Round)
+                </button>
+                <button type="button" class="btn-secondary btn-advance-end-game" style="padding:0.75rem 1.25rem; border-color:#ef4444; color:#f87171; font-weight:700;">
+                  🛑 สรุปคะแนน & จบเกม
                 </button>
               ` : ''}
               <button type="button" class="btn-secondary btn-mv-restart" style="padding:0.6rem 1.25rem; font-size:0.85rem;">

@@ -769,6 +769,11 @@
               ⚡ ข้ามเวลารอ (เฉลยทันที)
             </button>
 
+            <!-- Host End Game Early -->
+            <button id="btn-host-end-game-quiz" class="btn-secondary btn-host-end-game" style="display:none; font-size:0.85rem; border-color:#ef4444; color:#f87171;">
+              🛑 จบเกม (สรุปคะแนน)
+            </button>
+
             <!-- Progress Count -->
             <div class="answer-progress-pill">
               <span>⚡ ตอบแล้ว: <strong id="answered-count-text">0 / 1 คน</strong></span>
@@ -814,9 +819,12 @@
           </div>
 
           <!-- Next Question Control -->
-          <div id="reveal-host-controls" style="margin-top:1.5rem;">
-            <button id="btn-next-question" class="btn-primary">
+          <div id="reveal-host-controls" style="margin-top:1.5rem; display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+            <button id="btn-next-question" class="btn-primary" style="min-width:200px;">
               ข้อถัดไป ➡️
+            </button>
+            <button id="btn-host-end-game-reveal" class="btn-secondary btn-host-end-game" style="border-color:#ef4444; color:#f87171; font-weight:700; padding:0.85rem 1.5rem;">
+              🛑 สรุปคะแนน & จบเกม
             </button>
           </div>
           <div id="reveal-guest-controls" style="display:none; text-align:center; padding:1rem 0; color:var(--text-secondary); font-weight:700;">

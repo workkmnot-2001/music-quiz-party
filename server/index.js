@@ -1573,6 +1573,52 @@ io.on('connection', (socket) => {
     endRound(room);
   });
 
+  // Host triggers immediate game end (counting all points including latest played question)
+  socket.on('host_end_game', () => {
+    const room = rooms.get(socket.roomCode);
+    if (!room || room.hostId !== socket.id) return;
+    if (room.state !== 'quiz' && room.state !== 'reveal') return;
+
+    console.log(`[Room ${room.code}] Host ended game early at question ${room.currentQuestionIndex + 1}`);
+
+    if (room.roundTimeout) clearTimeout(room.roundTimeout);
+    if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
+
+    // If in active quiz round, evaluate current round first so current question points are counted!
+    if (room.state === 'quiz') {
+      const q = room.questions[room.currentQuestionIndex];
+      if (q) {
+        if (q.mode === 'choices' || q.mode === 'year') {
+          for (const p of room.players.values()) {
+            if (!p.answered && p.answerIndex !== null && p.answerIndex !== undefined) {
+              p.answered = true;
+              if (p.answerIndex === q.correctIndex) {
+                const pts = 500;
+                p.score = (p.score || 0) + pts;
+                p.pointsEarned = pts;
+                p.streak = (p.streak || 0) + 1;
+              }
+            }
+          }
+        } else if (q.mode === 'typing') {
+          for (const p of room.players.values()) {
+            if (!p.answered && p.typedAnswer) {
+              p.answered = true;
+              if (isTypingAnswerCorrect(p.typedAnswer, q.correctTitle, q.correctArtist)) {
+                const pts = 500;
+                p.score = (p.score || 0) + pts;
+                p.pointsEarned = pts;
+                p.streak = (p.streak || 0) + 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    endGame(room);
+  });
+
   function broadcastProgress(room, player) {
     const q = room.questions[room.currentQuestionIndex];
     if (q && (q.mode === 'songdle' || q.mode === 'mv')) return;
@@ -1764,9 +1810,10 @@ io.on('connection', (socket) => {
     if (room.autoAdvanceTimeout) clearTimeout(room.autoAdvanceTimeout);
 
     const leaderboard = getLeaderboard(room);
+    const playedQuestionsCount = room.currentQuestionIndex >= 0 ? room.currentQuestionIndex + 1 : room.questions.length;
     io.to(room.code).emit('game_over', {
       leaderboard,
-      totalQuestions: room.questions.length,
+      totalQuestions: playedQuestionsCount,
       topThree: leaderboard.slice(0, 3)
     });
   }

@@ -1761,6 +1761,23 @@ body {
   padding-top: 0.5rem;
 }
 
+.btn-host-end-game,
+.btn-advance-end-game {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.45) !important;
+  color: #f87171 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-host-end-game:hover,
+.btn-advance-end-game:hover {
+  background: rgba(239, 68, 68, 0.28) !important;
+  border-color: #ef4444 !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+}
+
 .answer-progress-pill {
   display: flex;
   align-items: center;
